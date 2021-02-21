@@ -10,11 +10,15 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@react-native-community/async-storage": "^1.12.1",
+    "@react-navigation/native": "^5.9.2",
+    "@reduxjs/toolkit": "^1.5.0",
     "axios-retry": "^3.1.9",
     "flipper-plugin-react-native-inspect-json-client": "^0.1.2",
     "react": "16.13.1",
     "react-native": "0.63.4",
     "react-native-flipper": "^0.76.0",
+    "react-redux": "^7.2.2",
     "redux": "^4.0.5",
     "redux-flipper": "^1.4.2",
     "redux-persist": "^6.0.0",
@@ -28,10 +32,11 @@
     "@types/jest": "^26.0.20",
     "@types/react": "^17.0.2",
     "@types/react-native": "^0.63.50",
+    "@types/react-redux": "^7.1.16",
     "@types/react-test-renderer": "^17.0.1",
     "babel-jest": "^25.1.0",
     "eslint": "^6.5.1",
-    "jest": "^25.1.0",
+    "jest": "^26.0.0",
     "metro-react-native-babel-preset": "^0.59.0",
     "react-addons-test-utils": "^15.6.2",
     "react-native-typescript-transformer": "^1.2.13",
@@ -47,8 +52,11 @@
       "js"
     ],
     "transform": {
+      "^.+\\.ts?$": "ts-jest",
+      "^.+\\.tsx?$": "ts-jest",
       "^.+\\.(js)$": "<rootDir>/node_modules/babel-jest",
-      "\\.(ts|tsx)$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+      "\\.(ts|tsx)$": "<rootDir>/node_modules/ts-jest/preprocessor.js",
+      "^.+\\.js$": "<rootDir>/node_modules/react-native/jest/preprocessor.js"
     },
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
     "testPathIgnorePatterns": [

@@ -1,0 +1,44 @@
+import React from 'react';
+import {View, TouchableOpacity, Text} from 'react-native';
+import {useDispatch, useSelector} from 'react-redux';
+import {
+  decrement,
+  increment,
+  asyncIncrement,
+} from '../store/counter/counter.store';
+
+// import { Container } from './styles';
+
+const Hello2: React.FC = () => {
+  const sel = useSelector((state: any) => state.store);
+
+  const dispatch = useDispatch();
+  console.log('object', sel);
+
+  return (
+    <View>
+      <Text>{sel?.counter}</Text>
+      <TouchableOpacity
+        onPress={() => {
+          dispatch(increment(5));
+        }}>
+        <Text>plus</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => {
+          dispatch(asyncIncrement(1));
+        }}>
+        <Text>plus async</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={{borderWidth: 1}}
+        onPress={() => {
+          dispatch(decrement());
+        }}>
+        <Text>minus</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+export default Hello2;
