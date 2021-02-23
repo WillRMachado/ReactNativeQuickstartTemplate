@@ -1,91 +1,43 @@
-// components/Hello.tsx
 import React from 'react';
-import {Button, StyleSheet, Text, View} from 'react-native';
+import {View, TouchableOpacity, Text} from 'react-native';
+import {useDispatch, useSelector} from 'react-redux';
+import {
+  decrement,
+  increment,
+  asyncIncrement,
+} from '../store/counter/counter.store';
 
-export interface Props {
-  name: string;
-  enthusiasmLevel?: number;
-}
+// import { Container } from './styles';
 
-interface State {
-  enthusiasmLevel: number;
-}
+const Hello: React.FC = () => {
+  const sel = useSelector((state: any) => state.store);
 
-export class Hello extends React.Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
+  const dispatch = useDispatch();
 
-    if ((props.enthusiasmLevel || 0) <= 0) {
-      throw new Error('You could be a little more enthusiastic. :D');
-    }
+  return (
+    <View>
+      <Text>{sel?.counter}</Text>
+      <TouchableOpacity
+        onPress={() => {
+          dispatch(increment(5));
+        }}>
+        <Text>plus</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => {
+          dispatch(asyncIncrement(1));
+        }}>
+        <Text>plus async</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={{borderWidth: 1}}
+        onPress={() => {
+          dispatch(decrement());
+        }}>
+        <Text>minus</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
-    this.state = {
-      enthusiasmLevel: props.enthusiasmLevel || 1,
-    };
-  }
-
-  onIncrement = () =>
-    this.setState({
-      enthusiasmLevel: this.state.enthusiasmLevel + 1,
-    });
-  onDecrement = () =>
-    this.setState({
-      enthusiasmLevel: this.state.enthusiasmLevel - 1,
-    });
-  getExclamationMarks = (numChars: number) => Array(numChars + 1).join('!');
-
-  render() {
-    return (
-      <View style={styles.root}>
-        <Text style={styles.greeting}>
-          Hello{' '}
-          {this.props.name +
-            this.getExclamationMarks(this.state.enthusiasmLevel)}
-        </Text>
-
-        <View style={styles.buttons}>
-          <View style={styles.button}>
-            <Button
-              title="-"
-              onPress={this.onDecrement}
-              accessibilityLabel="decrement"
-              color="red"
-            />
-          </View>
-
-          <View style={styles.button}>
-            <Button
-              title="+"
-              onPress={this.onIncrement}
-              accessibilityLabel="increment"
-              color="blue"
-            />
-          </View>
-        </View>
-      </View>
-    );
-  }
-}
-
-// styles
-const styles = StyleSheet.create({
-  root: {
-    alignItems: 'center',
-    alignSelf: 'center',
-  },
-  buttons: {
-    flexDirection: 'row',
-    minHeight: 70,
-    alignItems: 'stretch',
-    alignSelf: 'center',
-    borderWidth: 5,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 0,
-  },
-  greeting: {
-    color: '#999',
-    fontWeight: 'bold',
-  },
-});
+export default Hello;

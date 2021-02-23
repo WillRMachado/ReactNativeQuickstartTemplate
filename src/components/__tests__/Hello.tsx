@@ -1,11 +1,11 @@
-import React from 'react';
-import renderer from 'react-test-renderer';
+// import React from 'react';
+// import MockedNavigator from '../../../jestHelpers/mock/mockedNavigator';
+import screenSnapshotCreator from '../../../jestHelpers/screenSnapshotCreator';
 
-import {Hello} from '../Hello';
+import Hello from '../Hello';
 
-it('renders correctly with defaults', () => {
-  const button = renderer
-    .create(<Hello name="World" enthusiasmLevel={1} />)
-    .toJSON();
-  expect(button).toMatchSnapshot();
+it('renders correctly with defaults', async () => {
+  const screen = screenSnapshotCreator(Hello);
+
+  expect(screen).toMatchSnapshot();
 });

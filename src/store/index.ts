@@ -19,7 +19,7 @@ const persistedReducer = persistReducer(persistConfig, stockReducer);
 
 const middlewares = [];
 
-if (__DEV__) {
+if (__DEV__ && !process.env.JEST_WORKER_ID) {
   const createDebugger = require('redux-flipper').default;
   middlewares.push(createDebugger());
 }
