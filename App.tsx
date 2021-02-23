@@ -12,7 +12,6 @@ export default function App() {
       <PersistGate loading={null} persistor={persistor}>
         <NavigationContainer>
           {/* <LoginNavigation /> */}
-          {/* <Text>a8yusgeasuye</Text> */}
 
           <Hello />
         </NavigationContainer>

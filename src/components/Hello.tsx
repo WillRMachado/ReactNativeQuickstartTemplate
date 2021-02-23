@@ -9,14 +9,14 @@ import {
 
 // import { Container } from './styles';
 
-const Hello: React.FC = () => {
+const Hello: React.FunctionComponent = () => {
   const sel = useSelector((state: any) => state.store);
 
   const dispatch = useDispatch();
 
   return (
     <View>
-      <Text>{sel?.counter}</Text>
+      <Text testID="myTestId">{sel?.counter}</Text>
       <TouchableOpacity
         onPress={() => {
           dispatch(increment(5));
