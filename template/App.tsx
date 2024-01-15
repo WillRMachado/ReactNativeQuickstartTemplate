@@ -1,10 +1,10 @@
 import React from 'react';
 // import {StyleSheet} from 'react-native';
 
-import {GluestackUIProvider, Text, Box} from '@gluestack-ui/themed';
-import {config} from '@gluestack-ui/config';
-import {store} from './src/store';
-import {Provider} from 'react-redux';
+import { Provider } from 'react-redux';
+import { config } from '@gluestack-ui/config';
+import { Box, GluestackUIProvider, Text } from '@gluestack-ui/themed';
+import { store } from './src/store';
 
 function App(): React.JSX.Element {
 	// const isDarkMode = useColorScheme() === 'dark';

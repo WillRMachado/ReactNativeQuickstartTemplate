@@ -1,12 +1,17 @@
 module.exports = {
 	root: true,
 	extends: '@react-native',
+
+	parserOptions: {
+		requireConfigFile: false,
+	},
+	plugins: ['import', 'promise'],
 	rules: {
 		'@typescript-eslint/no-unused-vars': 'error',
 		'global-require': 0,
 		'react-hooks/exhaustive-deps': 'off',
 		quotes: ['error', 'single'],
-		'object-curly-spacing': ['error', 'always'],
+		'object-curly-spacing': [2, 'always'],
 		'array-bracket-spacing': ['error', 'never'],
 		'react/require-default-props': ['error'],
 		'react/default-props-match-prop-types': ['error'],
@@ -15,8 +20,6 @@ module.exports = {
 		'no-tabs': 'off',
 		'no-void': 'off',
 		'react/jsx-props-no-spreading': 'off',
-		'import/prefer-default-export': 'off',
-		'import/no-extraneous-dependencies': ['error', {devDependencies: true}],
 		'react/display-name': 'off',
 		'prettier/prettier': [
 			'error',
@@ -33,12 +36,12 @@ module.exports = {
 			},
 		],
 
-		'react/jsx-filename-extension': ['error', {extensions: ['.jsx', '.tsx']}],
+		'react/jsx-filename-extension': ['error', { extensions: ['.jsx', '.tsx'] }],
 		'sonarjs/no-duplicate-string': 0,
 		'react/prop-types': 0,
 		'@typescript-eslint/member-delimiter-style': 0,
 		'@typescript-eslint/no-empty-function': 0,
-		'@typescript-eslint/no-explicit-any': 0,
+		'@typescript-eslint/no-explicit-any': 1,
 		'import/no-named-as-default': 0,
 		'import/no-unresolved': 0,
 		'import/extensions': 0,
@@ -69,7 +72,7 @@ module.exports = {
 				},
 			},
 		],
-		'sort-imports': ['error', {ignoreDeclarationSort: true}],
+		'sort-imports': ['error', { ignoreDeclarationSort: true }],
 		'jsx-a11y/no-noninteractive-element-interactions': 'off',
 		'jsx-a11y/no-static-element-interactions': 'off',
 		'jsx-a11y/click-events-have-key-events': 'off',

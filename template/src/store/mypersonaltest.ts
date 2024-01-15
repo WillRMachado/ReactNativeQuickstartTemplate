@@ -1,4 +1,4 @@
-const first = (): any => {
+const first = () => {
 	's';
 };
 
