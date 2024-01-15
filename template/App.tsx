@@ -7,21 +7,21 @@ import {store} from './src/store';
 import {Provider} from 'react-redux';
 
 function App(): React.JSX.Element {
-  // const isDarkMode = useColorScheme() === 'dark';
+	// const isDarkMode = useColorScheme() === 'dark';
 
-  // const backgroundStyle = {
-  //   backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  // };
+	// const backgroundStyle = {
+	//   backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+	// };
 
-  return (
-    <Provider store={store}>
-      <GluestackUIProvider config={config}>
-        <Box>
-          <Text>Hello World!</Text>
-        </Box>
-      </GluestackUIProvider>
-    </Provider>
-  );
+	return (
+		<Provider store={store}>
+			<GluestackUIProvider config={config}>
+				<Box>
+					<Text>Hello World!</Text>
+				</Box>
+			</GluestackUIProvider>
+		</Provider>
+	);
 }
 
 // const styles = StyleSheet.create({

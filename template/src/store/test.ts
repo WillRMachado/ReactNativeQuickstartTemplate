@@ -1,5 +1,5 @@
 const first = (): any => {
-  's';
+	's';
 };
 
 export default first;
