@@ -1,11 +1,14 @@
 module.exports = {
+	env: {
+		'jest/globals': true,
+	},
 	root: true,
-	extends: '@react-native',
+	extends: ['@react-native', 'prettier'],
 
 	parserOptions: {
 		requireConfigFile: false,
 	},
-	plugins: ['import', 'promise'],
+	plugins: ['import', 'promise', 'prettier'],
 	rules: {
 		'@typescript-eslint/no-unused-vars': 'error',
 		'global-require': 0,
@@ -21,22 +24,12 @@ module.exports = {
 		'no-void': 'off',
 		'react/jsx-props-no-spreading': 'off',
 		'react/display-name': 'off',
-		'prettier/prettier': [
-			'error',
-			{
-				printWidth: 80,
-				endOfLine: 'lf',
-				tabWidth: 2,
-				indentStyle: 'space',
-				useTabs: true,
-				arrowParens: 'avoid',
-				bracketSameLine: false,
-				singleQuote: true,
-				trailingComma: 'all',
-			},
-		],
+		'prettier/prettier': ['error'],
 
-		'react/jsx-filename-extension': ['error', { extensions: ['.jsx', '.tsx'] }],
+		'react/jsx-filename-extension': [
+			'error',
+			{ extensions: ['.jsx', '.tsx'] },
+		],
 		'sonarjs/no-duplicate-string': 0,
 		'react/prop-types': 0,
 		'@typescript-eslint/member-delimiter-style': 0,
@@ -93,3 +86,9 @@ module.exports = {
 		},
 	},
 };
+
+// "extends": ["airbnb", "prettier"],
+// "plugins": ["prettier"],
+// "rules": {
+//   "prettier/prettier": ["error"]
+// }
