@@ -4,7 +4,7 @@ import renderer from 'react-test-renderer';
 import { config } from '@gluestack-ui/config';
 import { StyledProvider } from '@gluestack-ui/themed';
 
-import { it, expect } from '@jest/globals';
+import { it } from '@jest/globals';
 import App from '../App';
 
 it('renders correctly', () => {
@@ -15,5 +15,4 @@ it('renders correctly', () => {
 			</StyledProvider>,
 		)
 		.toJSON();
-	expect(true).toBeFalsy();
 });
