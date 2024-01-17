@@ -2,8 +2,8 @@ import React from 'react';
 // import {StyleSheet} from 'react-native';
 
 // import { Provider } from 'react-redux';
-import { config } from '@gluestack-ui/config';
-import { Box, GluestackUIProvider, Text } from '@gluestack-ui/themed';
+// import { config } from '@gluestack-ui/config';
+// import { Box, GluestackUIProvider, Text } from '@gluestack-ui/themed';
 // import { store } from './src/store';
 
 function App(): React.JSX.Element {
@@ -14,12 +14,13 @@ function App(): React.JSX.Element {
 	// };
 
 	return (
+		<></>
 		// <Provider store={store}>
-		// <GluestackUIProvider config={config}>
-		<Box>
-			<Text>Hello World!</Text>
-		</Box>
-		// </GluestackUIProvider>
+		// 	<GluestackUIProvider config={config}>
+		// 		<Box>
+		// 			<Text>Hello World!</Text>
+		// 		</Box>
+		// 	</GluestackUIProvider>
 		// </Provider>
 	);
 }
