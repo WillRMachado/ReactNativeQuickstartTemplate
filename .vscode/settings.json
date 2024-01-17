@@ -1,0 +1,5 @@
+{
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.detectIndentation": true,
+}
