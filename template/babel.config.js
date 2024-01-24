@@ -4,12 +4,14 @@ module.exports = {
 		[
 			'module-resolver',
 			{
-				root: ['./src'],
+				root: ['.'],
 				extensions: ['.ios.js', '.android.js', '.js', '.json'],
+				alias: {
+					src: './src',
+					'~wrappers': './utils/wrappers',
+				},
 			},
 		],
-		['babel-plugin-root-import', { rootPathSuffix: 'src' }],
-		['@babel/plugin-proposal-decorators', { legacy: true }],
 	],
 };
 

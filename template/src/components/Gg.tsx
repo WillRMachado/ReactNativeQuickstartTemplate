@@ -8,11 +8,11 @@ import { Box, Text } from '@gluestack-ui/themed';
 // import { GlobalWrapper } from './src/utils/wrappers';
 function App(): React.JSX.Element {
 	return (
-		// <GlobalWrapper>
+		<GlobalWrapper>
 			<Box>
 				<Text>Hello World!</Text>
 			</Box>
-		// </GlobalWrapper>
+		</GlobalWrapper>
 	);
 }
 

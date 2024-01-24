@@ -17,26 +17,25 @@
 		"noImplicitReturns": true,
 		"experimentalDecorators": true,
 		/* Module Resolution Options */
-		"baseUrl": ".",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"baseUrl": "",
 		"paths": {
-			"*": ["src/utils/types/*.ts"],
-			"@utils": ["src/utils"],
-			"~/wrappers": ["src/utils/wrappers"],
-			"~/api": ["src/api"],
-			"~/assets/svg": ["src/assets/svg"],
-			"~/assets/images": ["src/assets/images"],
-			"~/assets/animations": ["src/assets/animations"],
-			"~/components": ["src/components"],
-			"~/scenes": ["src/scenes"],
-			"~/services": ["src/services"],
-			"~/stores": ["src/stores"],
-			"~/theme": ["src/theme"],
-			"~/navigation": ["src/navigation"],
-			"~/utils": ["src/utils"]
+			"src/*": ["./src/*"],
+			"~/wrappers": ["./src/utils/wrappers"]
 		}
 	},
-	"types": ["src/utils/types/*"],
-	"include": ["src/**/*"],
+	"include": [
+		"./src/**/*",
+		"./**/*",
+		"./src/@types/**/*",
+		"index.d.ts",
+		".eslintrc.js",
+		"jest.setup.js",
+		"jest.config.js",
+		"babel.config.js",
+		"index.js"
+	],
 	"exclude": [
 		"node_modules",
 		"e2e",
