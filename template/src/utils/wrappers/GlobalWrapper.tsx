@@ -8,6 +8,7 @@ import { store } from '../../store';
 function App({ children }: { children: React.ReactNode }): React.JSX.Element {
 	return (
 		<Provider store={store}>
+			{/* {console.log(JSON.stringify({ config }))} */}
 			<GluestackUIProvider config={config}>
 				{children}
 			</GluestackUIProvider>
