@@ -1,15 +1,11 @@
 import React from 'react';
 
-// import { default as GlobalWrapper } from 'src/utils/wrappers/GlobalWrapper';
-// import { GlobalWrapper } from '@/';
 import { GlobalWrapper } from 'src/utils/wrappers';
-// import { Box, Text } from '@gluestack-ui/themed';
-import Gg from './src/components/Gg';
-// import { GlobalWrapper } from './src/utils/wrappers';
+import MainScreen from './src/scenes/welcome/mainScreen/MainScreen';
 function App(): React.JSX.Element {
 	return (
 		<GlobalWrapper>
-			<Gg />
+			<MainScreen />
 		</GlobalWrapper>
 	);
 }

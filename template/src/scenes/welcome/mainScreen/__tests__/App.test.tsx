@@ -10,7 +10,7 @@ import { config } from '@gluestack-ui/config';
 import { StyledProvider } from '@gluestack-ui/themed';
 import { expect, it } from '@jest/globals';
 // import GlobalWrapperMocked from '../../utils/wrappers/GlobalWrapperMocked';
-import Gg from '../Gg';
+import Gg from '../MainScreen';
 
 // // jest.useFakeTimers();
 // it('renders correctly', () => {
