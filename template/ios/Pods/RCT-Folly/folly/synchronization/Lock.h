@@ -26,6 +26,7 @@
 #include <folly/Traits.h>
 #include <folly/functional/Invoke.h>
 #include <folly/lang/Exception.h>
+#include <folly/lang/Hint.h>
 
 namespace folly {
 
@@ -111,7 +112,7 @@ struct lock_storage<Mutex, void> {
   lock_storage(lock_storage&& that) noexcept
       : mutex_{std::exchange(that.mutex_, nullptr)},
         state_{std::exchange(that.state_, false)} {}
-  lock_storage(Mutex& mutex, std::adopt_lock_t)
+  FOLLY_NODISCARD lock_storage(Mutex& mutex, std::adopt_lock_t)
       : mutex_{std::addressof(mutex)}, state_{true} {}
 
   void operator=(lock_storage&&) = delete;
@@ -155,25 +156,25 @@ class lock_base //
   using storage::storage;
   lock_base() = default;
   lock_base(lock_base&&) = default;
-  explicit lock_base(mutex_type& mutex) {
+  FOLLY_NODISCARD explicit lock_base(mutex_type& mutex) {
     storage::mutex_ = std::addressof(mutex);
     lock();
   }
   lock_base(mutex_type& mutex, std::defer_lock_t) noexcept {
     storage::mutex_ = std::addressof(mutex);
   }
-  lock_base(mutex_type& mutex, std::try_to_lock_t) {
+  FOLLY_NODISCARD lock_base(mutex_type& mutex, std::try_to_lock_t) {
     storage::mutex_ = std::addressof(mutex);
     try_lock();
   }
   template <typename Rep, typename Period>
-  lock_base(
+  FOLLY_NODISCARD lock_base(
       mutex_type& mutex, std::chrono::duration<Rep, Period> const& timeout) {
     storage::mutex_ = std::addressof(mutex);
     try_lock_for(timeout);
   }
   template <typename Clock, typename Duration>
-  lock_base(
+  FOLLY_NODISCARD lock_base(
       mutex_type& mutex,
       std::chrono::time_point<Clock, Duration> const& deadline) {
     storage::mutex_ = std::addressof(mutex);
@@ -284,7 +285,8 @@ class lock_base //
 };
 
 template <typename Mutex, typename Policy>
-class lock_guard_base {
+class lock_guard_base
+    : unsafe_for_async_usage_if<!is_coro_aware_mutex_v<Mutex>> {
  private:
   using lock_type_ = lock_base<Mutex, Policy>;
   using lock_state_type_ = typename lock_type_::state_type;
@@ -492,6 +494,11 @@ class upgrade_lock : public upgrade_lock_base<Mutex> {
   using upgrade_lock_base<Mutex>::upgrade_lock_base;
 };
 
+#if FOLLY_HAS_DEDUCTION_GUIDES || defined(_MSC_VER)
+template <typename Mutex, typename... A>
+explicit upgrade_lock(Mutex&, A const&...) -> upgrade_lock<Mutex>;
+#endif
+
 //  hybrid_lock
 //
 //  A lock-holder type which holds shared locks for shared mutex types or
@@ -504,7 +511,7 @@ class hybrid_lock : public hybrid_lock_base<Mutex> {
   using hybrid_lock_base<Mutex>::hybrid_lock_base;
 };
 
-#if __cpp_deduction_guides >= 201611
+#if FOLLY_HAS_DEDUCTION_GUIDES || defined(_MSC_VER)
 template <typename Mutex, typename... A>
 explicit hybrid_lock(Mutex&, A const&...) -> hybrid_lock<Mutex>;
 #endif
@@ -572,37 +579,49 @@ explicit hybrid_lock_guard(Mutex&, A const&...) -> hybrid_lock_guard<Mutex>;
 //
 //  Returns a unique_lock constructed with the given arguments. Deduces the
 //  mutex type.
-template <typename Mutex, typename... A>
-FOLLY_NODISCARD unique_lock<Mutex> make_unique_lock(Mutex& mutex, A&&... a) {
-  return unique_lock<Mutex>{mutex, static_cast<A&&>(a)...};
-}
+struct make_unique_lock_fn {
+  template <typename Mutex, typename... A>
+  FOLLY_NODISCARD unique_lock<Mutex> operator()(Mutex& mutex, A&&... a) const {
+    return unique_lock<Mutex>{mutex, static_cast<A&&>(a)...};
+  }
+};
+FOLLY_INLINE_VARIABLE constexpr make_unique_lock_fn make_unique_lock{};
 
 //  make_shared_lock
 //
 //  Returns a shared_lock constructed with the given arguments. Deduces the
 //  mutex type.
-template <typename Mutex, typename... A>
-FOLLY_NODISCARD shared_lock<Mutex> make_shared_lock(Mutex& mutex, A&&... a) {
-  return shared_lock<Mutex>{mutex, static_cast<A&&>(a)...};
-}
+struct make_shared_lock_fn {
+  template <typename Mutex, typename... A>
+  FOLLY_NODISCARD shared_lock<Mutex> operator()(Mutex& mutex, A&&... a) const {
+    return shared_lock<Mutex>{mutex, static_cast<A&&>(a)...};
+  }
+};
+FOLLY_INLINE_VARIABLE constexpr make_shared_lock_fn make_shared_lock{};
 
 //  make_upgrade_lock
 //
 //  Returns an upgrade_lock constructed with the given arguments. Deduces the
 //  mutex type.
-template <typename Mutex, typename... A>
-FOLLY_NODISCARD upgrade_lock<Mutex> make_upgrade_lock(Mutex& mutex, A&&... a) {
-  return upgrade_lock<Mutex>{mutex, static_cast<A&&>(a)...};
-}
+struct make_upgrade_lock_fn {
+  template <typename Mutex, typename... A>
+  FOLLY_NODISCARD upgrade_lock<Mutex> operator()(Mutex& mutex, A&&... a) const {
+    return upgrade_lock<Mutex>{mutex, static_cast<A&&>(a)...};
+  }
+};
+FOLLY_INLINE_VARIABLE constexpr make_upgrade_lock_fn make_upgrade_lock{};
 
 //  make_hybrid_lock
 //
 //  Returns a hybrid_lock constructed with the given arguments. Deduces the
 //  mutex type.
-template <typename Mutex, typename... A>
-FOLLY_NODISCARD hybrid_lock<Mutex> make_hybrid_lock(Mutex& mutex, A&&... a) {
-  return hybrid_lock<Mutex>{mutex, static_cast<A&&>(a)...};
-}
+struct make_hybrid_lock_fn {
+  template <typename Mutex, typename... A>
+  FOLLY_NODISCARD hybrid_lock<Mutex> operator()(Mutex& mutex, A&&... a) const {
+    return hybrid_lock<Mutex>{mutex, static_cast<A&&>(a)...};
+  }
+};
+FOLLY_INLINE_VARIABLE constexpr make_hybrid_lock_fn make_hybrid_lock{};
 
 namespace detail {
 
@@ -633,7 +652,9 @@ template <
     typename FromState = lock_state_type_of_t<From>,
     std::enable_if_t<std::is_void<FromState>::value, int> = 0>
 auto transition_lock_2_(From& lock, Transition transition, A const&... a) {
-  return transition(*lock.mutex(), a...);
+  // release() may check or mutate mutex state to support the dissociation, call
+  // it before performing the transition.
+  return transition(*lock.release(), a...);
 }
 template <
     typename From,
@@ -642,7 +663,10 @@ template <
     typename FromState = lock_state_type_of_t<From>,
     std::enable_if_t<!std::is_void<FromState>::value, int> = 0>
 auto transition_lock_2_(From& lock, Transition transition, A const&... a) {
-  return transition(*lock.mutex(), lock.state(), a...);
+  auto state = lock.state();
+  // release() may check or mutate mutex state to support the dissociation, call
+  // it before performing the transition.
+  return transition(*lock.release(), std::move(state), a...);
 }
 template <
     typename From,
@@ -651,7 +675,7 @@ template <
     typename Result = transition_lock_result_t_<From, Transition, A...>,
     std::enable_if_t<std::is_void<Result>::value, int> = 0>
 auto transition_lock_1_(From& lock, Transition transition, A const&... a) {
-  return transition_lock_2_(lock, transition, a...), true;
+  return detail::transition_lock_2_(lock, transition, a...), true;
 }
 template <
     typename From,
@@ -660,7 +684,7 @@ template <
     typename Result = transition_lock_result_t_<From, Transition, A...>,
     std::enable_if_t<!std::is_void<Result>::value, int> = 0>
 auto transition_lock_1_(From& lock, Transition transition, A const&... a) {
-  return transition_lock_2_(lock, transition, a...);
+  return detail::transition_lock_2_(lock, transition, a...);
 }
 template <
     typename To,
@@ -670,8 +694,9 @@ template <
     typename ToState = lock_state_type_of_t<To>,
     std::enable_if_t<std::is_void<ToState>::value, int> = 0>
 auto transition_lock_0_(From& lock, Transition transition, A const&... a) {
-  auto s = transition_lock_1_(lock, transition, a...);
-  return !s ? To{} : To{*lock.release(), std::adopt_lock};
+  auto& mutex = *lock.mutex();
+  auto s = detail::transition_lock_1_(lock, transition, a...);
+  return !s ? To{} : To{mutex, std::adopt_lock};
 }
 template <
     typename To,
@@ -681,8 +706,9 @@ template <
     typename ToState = lock_state_type_of_t<To>,
     std::enable_if_t<!std::is_void<ToState>::value, int> = 0>
 auto transition_lock_0_(From& lock, Transition transition, A const&... a) {
-  auto s = transition_lock_1_(lock, transition, a...);
-  return !s ? To{} : To{*lock.release(), std::adopt_lock, s};
+  auto& mutex = *lock.mutex();
+  auto s = detail::transition_lock_1_(lock, transition, a...);
+  return !s ? To{} : To{mutex, std::adopt_lock, s};
 }
 template <
     template <typename>
@@ -697,7 +723,7 @@ auto transition_lock_(From<Mutex>& lock, Transition transition, A const&... a) {
   return
       !lock.mutex() ? To<Mutex>{} :
       !lock.owns_lock() ? To<Mutex>{*lock.release(), std::defer_lock} :
-      transition_lock_0_<To<Mutex>>(lock, transition, a...);
+      detail::transition_lock_0_<To<Mutex>>(lock, transition, a...);
   // clang-format on
 }
 

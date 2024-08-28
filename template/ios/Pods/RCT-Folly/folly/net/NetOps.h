@@ -82,28 +82,11 @@ struct sockaddr_un {
 // Someone thought it would be a good idea
 // to define a field via a macro...
 #undef s_host
-#elif defined(__EMSCRIPTEN__)
-// Stub this out for now.
-using nfds_t = int;
-using socklen_t = int;
-struct sockaddr {};
-struct in_addr {};
-struct msghdr {
-  void* msg_name;
-  socklen_t msg_namelen;
-  struct iovec* msg_iov;
-  size_t msg_iovlen;
-  void* msg_control;
-  size_t msg_controllen;
-  int msg_flags;
-};
-
-struct mmsghdr {
-  struct msghdr msg_hdr;
-  unsigned int msg_len;
-};
-
 #else
+
+#if defined(__EMSCRIPTEN__)
+#include <sys/types.h>
+#endif
 
 #include <netdb.h>
 #include <poll.h>
@@ -115,10 +98,13 @@ struct mmsghdr {
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#if !defined(__EMSCRIPTEN__)
 #ifdef MSG_ERRQUEUE
 #define FOLLY_HAVE_MSG_ERRQUEUE 1
+#ifdef SCM_TIMESTAMPING
 #ifndef FOLLY_HAVE_SO_TIMESTAMPING
 #define FOLLY_HAVE_SO_TIMESTAMPING 1
+#endif
 #ifndef TCP_ZEROCOPY_RECEIVE
 #define TCP_ZEROCOPY_RECEIVE 35
 #endif
@@ -129,6 +115,7 @@ struct mmsghdr {
 #endif
 /* for struct sock_extended_err*/
 #include <linux/errqueue.h>
+#endif
 #endif
 
 #ifndef SO_EE_ORIGIN_ZEROCOPY
@@ -261,6 +248,19 @@ struct mmsghdr {
 
 #endif
 
+// Various sendmsg structs and ops.
+#ifdef _WIN32
+#define XPLAT_MSGHDR WSAMSG
+#define XPLAT_CMSGHDR WSACMSGHDR
+#define F_CMSG_LEN WSA_CMSG_LEN
+#define F_COPY_CMSG_INT_DATA(cm, val, len) *(PDWORD)WSA_CMSG_DATA(cm) = *(val)
+#else /* !_WIN32 */
+#define XPLAT_MSGHDR struct msghdr
+#define XPLAT_CMSGHDR struct cmsghdr
+#define F_CMSG_LEN CMSG_LEN
+#define F_COPY_CMSG_INT_DATA(cm, val, len) memcpy(CMSG_DATA(cm), val, len)
+#endif /* _WIN32 */
+
 namespace folly {
 namespace netops {
 // Poll descriptor is intended to be byte-for-byte identical to pollfd,
@@ -269,6 +269,30 @@ struct PollDescriptor {
   NetworkSocket fd;
   int16_t events;
   int16_t revents;
+};
+
+/**
+ * A msghdr/WSAMSG struct wrapper for cross-platform use.
+ */
+class Msgheader {
+ public:
+  void setName(sockaddr_storage* addrStorage, size_t len);
+  void setIovecs(const struct iovec* vec, size_t iovec_len);
+  void setCmsgPtr(char* ctrlBuf);
+  void setCmsgLen(size_t len);
+  void setFlags(int flags);
+  void incrCmsgLen(size_t val);
+  XPLAT_CMSGHDR* getFirstOrNextCmsgHeader(XPLAT_CMSGHDR* cm);
+  XPLAT_MSGHDR* getMsg();
+
+ private:
+  XPLAT_MSGHDR msg_;
+#ifdef _WIN32
+  std::unique_ptr<WSABUF[]> wsaBufs_;
+#endif
+
+  XPLAT_CMSGHDR* cmsgNextHrd(XPLAT_CMSGHDR* cm);
+  XPLAT_CMSGHDR* cmsgFirstHrd();
 };
 
 NetworkSocket accept(NetworkSocket s, sockaddr* addr, socklen_t* addrlen);
@@ -306,6 +330,10 @@ ssize_t sendto(
     const sockaddr* to,
     socklen_t tolen);
 ssize_t sendmsg(NetworkSocket socket, const msghdr* message, int flags);
+#ifdef _WIN32
+ssize_t wsaSendMsgDirect(NetworkSocket socket, WSAMSG* msg);
+#endif
+
 int sendmmsg(
     NetworkSocket socket, mmsghdr* msgvec, unsigned int vlen, int flags);
 int setsockopt(
@@ -322,5 +350,14 @@ int socketpair(int domain, int type, int protocol, NetworkSocket sv[2]);
 // our own way.
 int set_socket_non_blocking(NetworkSocket s);
 int set_socket_close_on_exec(NetworkSocket s);
+
+#ifdef _WIN32
+// Allow override for translation of WSA errors with analytics/tracking.
+typedef int (*wsa_error_translator_ptr)(
+    NetworkSocket socket, intptr_t api, intptr_t ret, int wsa_error);
+void set_wsa_error_translator(
+    wsa_error_translator_ptr translator, wsa_error_translator_ptr* previousOut);
+#endif
+
 } // namespace netops
 } // namespace folly

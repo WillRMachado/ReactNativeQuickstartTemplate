@@ -307,7 +307,7 @@ class LifoSemHead {
     assert(!isLocked());
     assert(!isNodeIdx());
     auto rv = LifoSemHead{bits + SeqIncr + delta};
-    if (UNLIKELY(rv.isNodeIdx())) {
+    if (FOLLY_UNLIKELY(rv.isNodeIdx())) {
       // value has overflowed into the isNodeIdx bit
       rv = LifoSemHead{(rv.bits & ~IsNodeIdxMask) | (IsNodeIdxMask - 1)};
     }
@@ -358,8 +358,13 @@ class LifoSemHead {
 /// See LifoSemNode for more information on how to make your own.
 template <typename Handoff, template <typename> class Atom = std::atomic>
 struct LifoSemBase {
+  /// Currently unused, only for compatibility with ThrottledLifoSem.
+  struct Options {};
+
   /// Constructor
   constexpr explicit LifoSemBase(uint32_t initialValue = 0)
+      : LifoSemBase({}, initialValue) {}
+  constexpr explicit LifoSemBase(const Options&, uint32_t initialValue = 0)
       : head_(in_place, LifoSemHead::fresh(initialValue)) {}
 
   LifoSemBase(LifoSemBase const&) = delete;
@@ -406,7 +411,7 @@ struct LifoSemBase {
 
   /// Returns true iff shutdown() has been called
   bool isShutdown() const {
-    return UNLIKELY(head_->load(std::memory_order_acquire).isShutdown());
+    return FOLLY_UNLIKELY(head_->load(std::memory_order_acquire).isShutdown());
   }
 
   /// Prevents blocking on this semaphore, causing all blocking wait()
@@ -514,7 +519,7 @@ struct LifoSemBase {
     UniquePtr node = allocateNode();
 
     auto rv = tryWaitOrPush(*node);
-    if (UNLIKELY(rv == WaitResult::SHUTDOWN)) {
+    if (FOLLY_UNLIKELY(rv == WaitResult::SHUTDOWN)) {
       assert(isShutdown());
       throw ShutdownSemError("wait() would block but semaphore is shut down");
     }
@@ -535,7 +540,7 @@ struct LifoSemBase {
           node->handoff().wait();
         }
       }
-      if (UNLIKELY(node->isShutdownNotice())) {
+      if (FOLLY_UNLIKELY(node->isShutdownNotice())) {
         // this wait() didn't consume a value, it was triggered by shutdown
         throw ShutdownSemError(
             "blocking wait() interrupted by semaphore shutdown");
@@ -734,7 +739,7 @@ struct LifoSemBase {
           return WaitResult::PUSH;
         }
 
-        if (UNLIKELY(head.isShutdown())) {
+        if (FOLLY_UNLIKELY(head.isShutdown())) {
           return WaitResult::SHUTDOWN;
         }
 
@@ -755,8 +760,8 @@ struct LifoSemBase {
 
 template <template <typename> class Atom, class BatonType>
 struct LifoSemImpl : public detail::LifoSemBase<BatonType, Atom> {
-  constexpr explicit LifoSemImpl(uint32_t v = 0)
-      : detail::LifoSemBase<BatonType, Atom>(v) {}
+  using Options = typename detail::LifoSemBase<BatonType, Atom>::Options;
+  using detail::LifoSemBase<BatonType, Atom>::LifoSemBase;
 };
 
 } // namespace folly

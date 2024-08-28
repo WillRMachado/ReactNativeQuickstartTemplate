@@ -62,20 +62,27 @@ T declval() noexcept;
 
 namespace detail {
 template <typename T>
-T decay_(T) noexcept;
+T decay_1_(T const volatile&&);
+template <typename T>
+T decay_1_(T const&);
+template <typename T>
+T* decay_1_(T*);
+
+template <typename T>
+auto decay_0_(int) -> decltype(detail::decay_1_(FOLLY_DECLVAL(T &&)));
+template <typename T>
+auto decay_0_(short) -> void;
+
+template <typename T>
+using decay_t = decltype(detail::decay_0_<T>(0));
+} // namespace detail
 
 //  decay_t
 //
 //  Like std::decay_t but possibly faster to compile.
 //
-//  Marked as detail since this differs from std::decay_t in some respects:
-//  * incomplete decayed types are forbidden
-//  * non-moveable decayed types are forbidden
-//
 //  mimic: std::decay_t, C++14
-template <typename T>
-using decay_t = decltype(detail::decay_(FOLLY_DECLVAL(T &&)));
-} // namespace detail
+using detail::decay_t;
 
 /**
  *  copy
@@ -106,15 +113,15 @@ using decay_t = decltype(detail::decay_(FOLLY_DECLVAL(T &&)));
  *
  *  Note: The following text appears in the standard:
  *
- *  > In several places in this Clause the operation //DECAY_COPY(x)// is used.
- *  > All such uses mean call the function `decay_copy(x)` and use the result,
- *  > where `decay_copy` is defined as follows:
- *  >
- *  >   template <class T> decay_t<T> decay_copy(T&& v)
- *  >     { return std::forward<T>(v); }
- *  >
- *  > http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4296.pdf
- *  >   30.2.6 `decay_copy` [thread.decaycopy].
+ *      In several places in this Clause the operation //DECAY_COPY(x)// is
+ *      used. All such uses mean call the function `decay_copy(x)` and use the
+ *      result, where `decay_copy` is defined as follows:
+ *
+ *        template <class T> decay_t<T> decay_copy(T&& v)
+ *          { return std::forward<T>(v); }
+ *
+ *      http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4296.pdf
+ *        30.2.6 `decay_copy` [thread.decaycopy].
  *
  *  We mimic it, with a `noexcept` specifier for good measure.
  */
@@ -385,61 +392,62 @@ using inheritable =
 
 } // namespace detail
 
-namespace moveonly_ { // Protection from unintended ADL.
-
-template <bool Copy, bool Move>
-class EnableCopyMove {
- protected:
-  constexpr EnableCopyMove() noexcept = default;
-  ~EnableCopyMove() noexcept = default;
-
-  EnableCopyMove(EnableCopyMove&&) noexcept = default;
-  EnableCopyMove& operator=(EnableCopyMove&&) noexcept = default;
-  EnableCopyMove(const EnableCopyMove&) noexcept = default;
-  EnableCopyMove& operator=(const EnableCopyMove&) noexcept = default;
-};
+// Prevent child classes from finding anything in folly:: by ADL.
+namespace moveonly_ {
 
 /**
  * Disallow copy but not move in derived types. This is essentially
- * boost::noncopyable (the implementation is almost identical) but it
- * doesn't delete move constructor and move assignment.
+ * boost::noncopyable (the implementation is almost identical), except:
+ * 1) It doesn't delete move constructor and move assignment.
+ * 2) It has public methods, enabling aggregate initialization.
  */
-template <>
-class EnableCopyMove<false, true> {
- protected:
-  constexpr EnableCopyMove() noexcept = default;
-  ~EnableCopyMove() noexcept = default;
+struct MoveOnly {
+  constexpr MoveOnly() noexcept = default;
+  ~MoveOnly() noexcept = default;
 
-  EnableCopyMove(EnableCopyMove&&) noexcept = default;
-  EnableCopyMove& operator=(EnableCopyMove&&) noexcept = default;
-  EnableCopyMove(const EnableCopyMove&) = delete;
-  EnableCopyMove& operator=(const EnableCopyMove&) = delete;
+  MoveOnly(MoveOnly&&) noexcept = default;
+  MoveOnly& operator=(MoveOnly&&) noexcept = default;
+  MoveOnly(const MoveOnly&) = delete;
+  MoveOnly& operator=(const MoveOnly&) = delete;
 };
 
-template <>
-class EnableCopyMove<false, false> {
- protected:
-  constexpr EnableCopyMove() noexcept = default;
-  ~EnableCopyMove() noexcept = default;
+/**
+ * Disallow copy and move for derived types. This is essentially
+ * boost::noncopyable (the implementation is almost identical), except it has
+ * public methods, enabling aggregate initialization.
+ */
+struct NonCopyableNonMovable {
+  constexpr NonCopyableNonMovable() noexcept = default;
+  ~NonCopyableNonMovable() noexcept = default;
 
-  EnableCopyMove(EnableCopyMove&&) = delete;
-  EnableCopyMove& operator=(EnableCopyMove&&) = delete;
-  EnableCopyMove(const EnableCopyMove&) = delete;
-  EnableCopyMove& operator=(const EnableCopyMove&) = delete;
+  NonCopyableNonMovable(NonCopyableNonMovable&&) = delete;
+  NonCopyableNonMovable& operator=(NonCopyableNonMovable&&) = delete;
+  NonCopyableNonMovable(const NonCopyableNonMovable&) = delete;
+  NonCopyableNonMovable& operator=(const NonCopyableNonMovable&) = delete;
 };
+
+struct Default {};
+
+template <bool Copy, bool Move>
+using EnableCopyMove = std::conditional_t<
+    Copy,
+    Default,
+    std::conditional_t<Move, MoveOnly, NonCopyableNonMovable>>;
+
 } // namespace moveonly_
 
-using MoveOnly = moveonly_::EnableCopyMove<false, true>;
+using moveonly_::MoveOnly;
+using moveonly_::NonCopyableNonMovable;
 
-//  unsafe_default_uninitialized
-//  unsafe_default_uninitialized_cv
+//  unsafe_default_initialized
+//  unsafe_default_initialized_cv
 //
 //  An object which is explicitly convertible to any default-constructible type
 //  and which, upon conversion, yields a default-initialized value of that type.
 //
 //  https://en.cppreference.com/w/cpp/language/default_initialization
 //
-//  For fundamental types, a default-initalized instance may have indeterminate
+//  For fundamental types, a default-initialized instance may have indeterminate
 //  value. Reading an indeterminate value is undefined behavior but may offer a
 //  performance optimization. When using an indeterminate value as a performance
 //  optimization, it is best to be explicit.
@@ -463,16 +471,32 @@ using MoveOnly = moveonly_::EnableCopyMove<false, true>;
 //      store_value_into_int_ptr(&value); // suppresses possible warning
 //      use_value(value); // suppresses possible warning
 struct unsafe_default_initialized_cv {
+  FOLLY_PUSH_WARNING
+  // MSVC requires warning disables to be outside of function definition
+  // Uninitialized local variable 'uninit' used
+  FOLLY_MSVC_DISABLE_WARNING(4700)
+  // Potentially uninitialized local variable 'uninit' used
+  FOLLY_MSVC_DISABLE_WARNING(4701)
+  // Potentially uninitialized local pointer variable 'uninit' used
+  FOLLY_MSVC_DISABLE_WARNING(4703)
+  FOLLY_GNU_DISABLE_WARNING("-Wuninitialized")
+  // Clang doesn't implement -Wmaybe-uninitialized and warns about it
+  FOLLY_GCC_DISABLE_WARNING("-Wmaybe-uninitialized")
   template <typename T>
   FOLLY_ERASE constexpr /* implicit */ operator T() const noexcept {
-    T uninit;
-    FOLLY_PUSH_WARNING
-    FOLLY_MSVC_DISABLE_WARNING(4701)
-    FOLLY_MSVC_DISABLE_WARNING(4703)
-    FOLLY_GNU_DISABLE_WARNING("-Wuninitialized")
-    return uninit;
-    FOLLY_POP_WARNING
+#if defined(__cpp_lib_is_constant_evaluated)
+#if __cpp_lib_is_constant_evaluated >= 201811L
+#if !defined(__MSVC_RUNTIME_CHECKS)
+    if (!std::is_constant_evaluated()) {
+      T uninit;
+      return uninit;
+    }
+#endif // !defined(__MSVC_RUNTIME_CHECKS)
+#endif
+#endif
+    return T();
   }
+  FOLLY_POP_WARNING
 };
 FOLLY_INLINE_VARIABLE constexpr unsafe_default_initialized_cv
     unsafe_default_initialized{};
@@ -685,4 +709,127 @@ struct to_underlying_fn {
 };
 FOLLY_INLINE_VARIABLE constexpr to_underlying_fn to_underlying{};
 
+namespace detail {
+template <typename R>
+using invocable_to_detect = decltype(FOLLY_DECLVAL(R)());
+
+template <
+    typename F,
+    //  MSVC 14.16.27023 does not permit these to be in the class body:
+    //    error C2833: 'operator decltype' is not a recognized operator or type
+    //  TODO: return these to the class body and remove the static assertions
+    typename TML = detected_t<invocable_to_detect, F&>,
+    typename TCL = detected_t<invocable_to_detect, F const&>,
+    typename TMR = detected_t<invocable_to_detect, F&&>,
+    typename TCR = detected_t<invocable_to_detect, F const&&>>
+class invocable_to_convertible : private inheritable<F> {
+ private:
+  static_assert(std::is_same<F, decay_t<F>>::value, "mismatch");
+
+  template <typename R>
+  using result_t = detected_t<invocable_to_detect, R>;
+  template <typename R>
+  static constexpr bool detected_v = is_detected_v<invocable_to_detect, R>;
+  template <typename R>
+  using if_invocable_as_v = std::enable_if_t<detected_v<R>, int>;
+  template <typename R>
+  static constexpr bool nx_v = noexcept(FOLLY_DECLVAL(R)());
+  template <typename G>
+  static constexpr bool constructible_v = std::is_constructible<F, G&&>::value;
+
+  using FML = F&;
+  using FCL = F const&;
+  using FMR = F&&;
+  using FCR = F const&&;
+  static_assert(std::is_same<TML, result_t<FML>>::value, "mismatch");
+  static_assert(std::is_same<TCL, result_t<FCL>>::value, "mismatch");
+  static_assert(std::is_same<TMR, result_t<FMR>>::value, "mismatch");
+  static_assert(std::is_same<TCR, result_t<FCR>>::value, "mismatch");
+
+ public:
+  template <typename G, std::enable_if_t<constructible_v<G&&>, int> = 0>
+  FOLLY_ERASE explicit constexpr invocable_to_convertible(G&& g) noexcept(
+      noexcept(F(static_cast<G&&>(g))))
+      : inheritable<F>(static_cast<G&&>(g)) {}
+
+  template <typename..., typename R = FML, if_invocable_as_v<R> = 0>
+  FOLLY_ERASE constexpr operator TML() & noexcept(nx_v<R>) {
+    return static_cast<FML>(*this)();
+  }
+  template <typename..., typename R = FCL, if_invocable_as_v<R> = 0>
+  FOLLY_ERASE constexpr operator TCL() const& noexcept(nx_v<R>) {
+    return static_cast<FCL>(*this)();
+  }
+  template <typename..., typename R = FMR, if_invocable_as_v<R> = 0>
+  FOLLY_ERASE constexpr operator TMR() && noexcept(nx_v<R>) {
+    return static_cast<FMR>(*this)();
+  }
+  template <typename..., typename R = FCR, if_invocable_as_v<R> = 0>
+  FOLLY_ERASE constexpr operator TCR() const&& noexcept(nx_v<R>) {
+    return static_cast<FCR>(*this)();
+  }
+};
+} // namespace detail
+
+//  invocable_to
+//  invocable_to_fn
+//
+//  Given an invocable, returns an object which is implicitly convertible to the
+//  type which the invocable returns when invoked with no arguments. Conversion
+//  invokes the invocables and returns the value.
+//
+//  The return object has unspecified type with the following semantics:
+//  * It stores a decay-copy of the passed invocable.
+//  * It defines four-way conversion operators. Each conversion operator purely
+//    forwards to the invocable as forwarded-like the convertible, and has the
+//    same exception specification and the same participation in overload
+//    resolution as invocation of the invocable.
+//
+//  Example:
+//
+//    Given a setup:
+//
+//      struct stable {
+//        int value = 0;
+//        stable() = default;
+//        stable(stable const&); // expensive!
+//      };
+//      std::list<stable const> list;
+//
+//    The goal is to insert a stable with a value of 7 to the back of the list.
+//
+//    The obvious ways are expensive:
+//
+//      stable obj;
+//      obj.value = 7;
+//      list.push_back(obj); // or variations with emplace_back or std::move
+//
+//    With a lambda and copy elision optimization (NRVO), the expense remains:
+//
+//      list.push_back(std::invoke([] {
+//        stable obj;
+//        obj.value = 7;
+//        return obj;
+//      }));
+//
+//    But conversion, as done with this utility, makes this goal achievable.
+//
+//      list.emplace_back(folly::invoke_to([] {
+//        stable obj;
+//        obj.value = 7;
+//        return obj;
+//      }));
+struct invocable_to_fn {
+  template <
+      typename F,
+      typename...,
+      typename D = detail::decay_t<F>,
+      typename R = detail::invocable_to_convertible<D>,
+      std::enable_if_t<std::is_constructible<D, F&&>::value, int> = 0>
+  FOLLY_ERASE constexpr R operator()(F&& f) const
+      noexcept(noexcept(R(static_cast<F&&>(f)))) {
+    return R(static_cast<F&&>(f));
+  }
+};
+FOLLY_INLINE_VARIABLE constexpr invocable_to_fn invocable_to{};
 } // namespace folly

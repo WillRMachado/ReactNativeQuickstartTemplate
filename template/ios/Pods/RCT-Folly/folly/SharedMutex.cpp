@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
+#include <system_error>
+
 #include <folly/SharedMutex.h>
 
 #include <folly/Indestructible.h>
+#include <folly/lang/Exception.h>
+#include <folly/portability/SysResource.h>
 
 namespace folly {
 // Explicitly instantiate SharedMutex here:
@@ -39,15 +43,39 @@ std::unique_lock<std::mutex> annotationGuard(void* ptr) {
   }
 }
 
-uint32_t getMaxDeferredReadersSlow(std::atomic<uint32_t>& cache) {
+uint32_t getMaxDeferredReadersSlow(relaxed_atomic<uint32_t>& cache) {
   uint32_t maxDeferredReaders = std::min(
       static_cast<uint32_t>(
           folly::nextPowTwo(CacheLocality::system().numCpus) << 1),
       shared_mutex_detail::kMaxDeferredReadersAllocated);
   // maxDeferredReaders must be a power of 2
   assert(!(maxDeferredReaders & (maxDeferredReaders - 1)));
-  cache.store(maxDeferredReaders, std::memory_order_release);
+  cache = maxDeferredReaders;
   return maxDeferredReaders;
 }
+
+long getCurrentThreadInvoluntaryContextSwitchCount() {
+#ifdef RUSAGE_THREAD
+  struct rusage usage;
+  if (getrusage(RUSAGE_THREAD, &usage)) {
+    return 0;
+  } else {
+    return usage.ru_nivcsw;
+  }
+#else
+  return 0;
+#endif
+}
+
+[[noreturn]] void throwOperationNotPermitted() {
+  folly::throw_exception<std::system_error>(
+      std::make_error_code(std::errc::operation_not_permitted));
+}
+
+[[noreturn]] void throwDeadlockWouldOccur() {
+  folly::throw_exception<std::system_error>(
+      std::make_error_code(std::errc::resource_deadlock_would_occur));
+}
+
 } // namespace shared_mutex_detail
 } // namespace folly

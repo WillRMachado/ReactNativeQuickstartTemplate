@@ -131,7 +131,7 @@
 //       // done accessing the pointed-to data. We get a Guard on that
 //       // domain; as long as it exists, no function subsequently passed to
 //       // invokeEventually will execute.
-//       std::scoped_lock<rcu_domain>(rcu_default_domain());
+//       std::scoped_lock<rcu_domain> guard(rcu_default_domain());
 //       ConfigData* configData = globalConfigData.load();
 //       // We created a guard before we read globalConfigData; we know that the
 //       // pointer will remain valid until the guard is destroyed.
@@ -152,7 +152,7 @@
 //     globalConfigData.store(newConfigData);
 //     rcu_retire(oldConfigData);
 //     // alternatively, in a blocking manner:
-//     //   synchronize_rcu();
+//     //   rcu_synchronize();
 //     //   delete oldConfigData;
 //   }
 // }
@@ -337,11 +337,20 @@ class rcu_domain {
   // from being freed, and synchronize() calls from completing until
   // all preceding lock() sections are finished.
 
-  // Note: can potentially allocate on thread first use.
-  FOLLY_ALWAYS_INLINE void lock() {
+  /*
+   * Enter a read region on the current thread.
+   *
+   * Note that despite the function being marked noexcept, an allocation
+   * may take place in folly::ThreadLocal the first time a thread enters a read
+   * region. Regardless, for now, we're marking this as noexcept to match the
+   * N4895 standard proposal:
+   *
+   * https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/n4895.pdf
+   */
+  FOLLY_ALWAYS_INLINE void lock() noexcept {
     counters_.increment(version_.load(std::memory_order_acquire));
   }
-  FOLLY_ALWAYS_INLINE void unlock() { counters_.decrement(); }
+  FOLLY_ALWAYS_INLINE void unlock() noexcept { counters_.decrement(); }
 
   // Invokes cbin(this) and then deletes this some time after all pre-existing
   // RCU readers have completed.  See rcu_synchronize() for more information

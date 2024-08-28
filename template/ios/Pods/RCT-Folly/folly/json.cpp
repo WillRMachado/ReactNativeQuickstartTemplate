@@ -28,7 +28,6 @@
 #include <folly/Conv.h>
 #include <folly/Portability.h>
 #include <folly/Range.h>
-#include <folly/String.h>
 #include <folly/Unicode.h>
 #include <folly/Utility.h>
 #include <folly/lang/Bits.h>
@@ -118,7 +117,11 @@ struct Printer {
           }
         }
         toAppend(
-            v.asDouble(), &out_, opts_.double_mode, opts_.double_num_digits);
+            v.asDouble(),
+            &out_,
+            opts_.double_mode,
+            opts_.double_num_digits,
+            opts_.double_flags);
         break;
       case dynamic::INT64: {
         auto intval = v.asInt();
@@ -541,7 +544,7 @@ dynamic parseArray(Input& in, json::metadata_map* map) {
     in.skipWhitespace();
   }
   if (map) {
-    for (size_t i = 0; i < ret.size(); i++) {
+    for (size_t i = 0, e = ret.size(); i < e; i++) {
       map->emplace(&ret[i], json::parse_metadata{{{0}}, {{lineNumbers[i]}}});
     }
   }
@@ -578,7 +581,8 @@ dynamic parseNumber(Input& in) {
   auto extremaLen = negative ? minIntLen : maxIntLen;
   auto extremaStr = negative ? minIntStr : maxIntStr;
   if (*in != '.' && !wasE) {
-    if (LIKELY(!in.getOpts().double_fallback || integral.size() < extremaLen) ||
+    if (FOLLY_LIKELY(
+            !in.getOpts().double_fallback || integral.size() < extremaLen) ||
         (integral.size() == extremaLen && integral <= extremaStr)) {
       auto val = to<int64_t>(integral);
       in.skipWhitespace();
@@ -607,7 +611,7 @@ dynamic parseNumber(Input& in) {
   return val;
 }
 
-std::string decodeUnicodeEscape(Input& in) {
+void decodeUnicodeEscape(Input& in, std::string& out) {
   auto hexVal = [&](int c) -> uint16_t {
     // clang-format off
     return uint16_t(
@@ -655,7 +659,7 @@ std::string decodeUnicodeEscape(Input& in) {
     in.error("invalid unicode code point (in range [0xdc00,0xdfff])");
   }
 
-  return codePointToUtf8(codePoint);
+  appendCodePointToUtf8(codePoint, out);
 }
 
 std::string parseString(Input& in) {
@@ -683,7 +687,7 @@ std::string parseString(Input& in) {
         case 'n':     ret.push_back('\n'); ++in; break;
         case 'r':     ret.push_back('\r'); ++in; break;
         case 't':     ret.push_back('\t'); ++in; break;
-        case 'u':     ++in; ret += decodeUnicodeEscape(in); break;
+        case 'u':     ++in; decodeUnicodeEscape(in, ret); break;
         // clang-format on
         default:
           in.error(
@@ -789,12 +793,13 @@ size_t firstEscapableInWord(T s, const serialization_opts& opts) {
     // set for ascii characters 32 - 127, so the inner loop may run up to 96
     // times. However, for the case where 0 or a handful of bits are set,
     // looping will be minimal through use of findFirstSet.
-    for (size_t i = 0; i < opts.extra_ascii_to_escape_bitmap.size(); ++i) {
+    for (size_t i = 0, e = opts.extra_ascii_to_escape_bitmap.size(); i < e;
+         ++i) {
       const auto offset = i * 64;
       // Clear first 32 characters if this is the first index, since those are
       // always escaped.
       auto bitmap = opts.extra_ascii_to_escape_bitmap[i] &
-          (i == 0 ? uint64_t(-1) << 32 : ~0UL);
+          (i == 0 ? uint64_t(-1) << 32 : ~0ULL);
       while (bitmap) {
         auto bit = folly::findFirstSet(bitmap);
         needsEscape |= isChar(static_cast<uint8_t>(offset + bit - 1));
@@ -989,7 +994,7 @@ std::string stripComments(StringPiece jsonC) {
         break;
       case State::InString:
         if (s[0] == '\\') {
-          if (UNLIKELY(s.size() == 1)) {
+          if (FOLLY_UNLIKELY(s.size() == 1)) {
             throw std::logic_error("Invalid JSONC: string is not terminated");
           }
           result.push_back(s[0]);
@@ -1002,14 +1007,18 @@ std::string stripComments(StringPiece jsonC) {
         result.push_back(s[0]);
         break;
       case State::InlineComment:
-        if (s.startsWith("*/")) {
+        if (s.startsWith('\n')) {
+          // preserve the line break to preserve the line count
+          result.push_back(s[0]);
+        } else if (s.startsWith("*/")) {
           state = State::None;
           ++i;
         }
         break;
       case State::LineComment:
         if (s[0] == '\n') {
-          // skip the line break. It doesn't matter.
+          // preserve the line break to preserve the line count
+          result.push_back(s[0]);
           state = State::None;
         }
         break;

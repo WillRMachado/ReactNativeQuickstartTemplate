@@ -271,7 +271,7 @@ Expected<bool, ConversionCode> str_to_bool(StringPiece* src) noexcept {
     if (b >= e) {
       return makeUnexpected(ConversionCode::EMPTY_INPUT_STRING);
     }
-    if (!std::isspace(*b)) {
+    if ((*b < '\t' || *b > '\r') && *b != ' ') {
       break;
     }
   }
@@ -396,8 +396,9 @@ Expected<Tgt, ConversionCode> str_to_floating(StringPiece* src) noexcept {
   }
 
   auto* e = src->end();
-  auto* b =
-      std::find_if_not(src->begin(), e, [](char c) { return std::isspace(c); });
+  auto* b = std::find_if_not(src->begin(), e, [](char c) {
+    return (c >= '\t' && c <= '\r') || c == ' ';
+  });
   if (b == e) {
     return makeUnexpected(ConversionCode::EMPTY_INPUT_STRING);
   }
@@ -462,6 +463,8 @@ template Expected<float, ConversionCode> str_to_floating<float>(
 template Expected<double, ConversionCode> str_to_floating<double>(
     StringPiece* src) noexcept;
 
+namespace {
+
 /**
  * This class takes care of additional processing needed for signed values,
  * like leading sign character and overflow checks.
@@ -477,7 +480,7 @@ class SignedValueHandler<T, true> {
     if (!std::isdigit(*b)) {
       if (*b == '-') {
         negative_ = true;
-      } else if (UNLIKELY(*b != '+')) {
+      } else if (FOLLY_UNLIKELY(*b != '+')) {
         return ConversionCode::INVALID_LEADING_CHAR;
       }
       ++b;
@@ -502,12 +505,12 @@ class SignedValueHandler<T, true> {
 
       FOLLY_POP_WARNING
 
-      if (UNLIKELY(rv > 0)) {
+      if (FOLLY_UNLIKELY(rv > 0)) {
         return makeUnexpected(ConversionCode::NEGATIVE_OVERFLOW);
       }
     } else {
       rv = T(value);
-      if (UNLIKELY(rv < 0)) {
+      if (FOLLY_UNLIKELY(rv < 0)) {
         return makeUnexpected(ConversionCode::POSITIVE_OVERFLOW);
       }
     }
@@ -529,6 +532,8 @@ class SignedValueHandler<T, false> {
   Expected<T, ConversionCode> finalize(T value) { return value; }
 };
 
+} // namespace
+
 /**
  * String represented as a pair of pointers to char to signed/unsigned
  * integrals. Assumes NO whitespace before or after, and also that the
@@ -545,7 +550,7 @@ inline Expected<Tgt, ConversionCode> digits_to(
   SignedValueHandler<Tgt> sgn;
 
   auto err = sgn.init(b);
-  if (UNLIKELY(err != ConversionCode::SUCCESS)) {
+  if (FOLLY_UNLIKELY(err != ConversionCode::SUCCESS)) {
     return makeUnexpected(err);
   }
 
@@ -681,10 +686,10 @@ Expected<Tgt, ConversionCode> str_to_integral(StringPiece* src) noexcept {
   auto b = src->data(), past = src->data() + src->size();
 
   for (;; ++b) {
-    if (UNLIKELY(b >= past)) {
+    if (FOLLY_UNLIKELY(b >= past)) {
       return makeUnexpected(ConversionCode::EMPTY_INPUT_STRING);
     }
-    if (!std::isspace(*b)) {
+    if ((*b < '\t' || *b > '\r') && *b != ' ') {
       break;
     }
   }
@@ -692,13 +697,13 @@ Expected<Tgt, ConversionCode> str_to_integral(StringPiece* src) noexcept {
   SignedValueHandler<Tgt> sgn;
   auto err = sgn.init(b);
 
-  if (UNLIKELY(err != ConversionCode::SUCCESS)) {
+  if (FOLLY_UNLIKELY(err != ConversionCode::SUCCESS)) {
     return makeUnexpected(err);
   }
-  if (is_signed_v<Tgt> && UNLIKELY(b >= past)) {
+  if (is_signed_v<Tgt> && FOLLY_UNLIKELY(b >= past)) {
     return makeUnexpected(ConversionCode::NO_DIGITS);
   }
-  if (UNLIKELY(!isdigit(*b))) {
+  if (FOLLY_UNLIKELY(!isdigit(*b))) {
     return makeUnexpected(ConversionCode::NON_DIGIT_CHAR);
   }
 
@@ -706,7 +711,7 @@ Expected<Tgt, ConversionCode> str_to_integral(StringPiece* src) noexcept {
 
   auto tmp = digits_to<UT>(b, m);
 
-  if (UNLIKELY(!tmp.hasValue())) {
+  if (FOLLY_UNLIKELY(!tmp.hasValue())) {
     return makeUnexpected(
         tmp.error() == ConversionCode::POSITIVE_OVERFLOW ? sgn.overflow()
                                                          : tmp.error());

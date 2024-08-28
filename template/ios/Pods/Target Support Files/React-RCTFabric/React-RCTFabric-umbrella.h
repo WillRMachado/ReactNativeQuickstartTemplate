@@ -11,6 +11,7 @@
 #endif
 
 #import "React/RCTActivityIndicatorViewComponentView.h"
+#import "React/RCTDebuggingOverlayComponentView.h"
 #import "React/RCTImageComponentView.h"
 #import "React/RCTInputAccessoryComponentView.h"
 #import "React/RCTInputAccessoryContentView.h"
@@ -60,6 +61,7 @@
 #import "React/RCTTouchableComponentViewProtocol.h"
 #import "React/RCTFabricSurface.h"
 #import "React/PlatformRunLoopObserver.h"
+#import "React/RCTColorSpaceUtils.h"
 #import "React/RCTGenericDelegateSplitter.h"
 #import "React/RCTIdentifierPool.h"
 #import "React/RCTReactTaggedView.h"

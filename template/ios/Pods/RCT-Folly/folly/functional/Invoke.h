@@ -80,6 +80,56 @@ namespace folly {
 
 namespace invoke_detail {
 
+//  ok_one_
+//
+//  A quoted-metafunction which, when applied to type T, enforces that T is a
+//  complete type, (possibly cv-qualified) void, or an array of unknown bound.
+//  Substitutes as void if that holds; otherwise fails a static-assert.
+struct ok_one_ {
+  template <typename T>
+  static constexpr bool pass_v = ( //
+      std::is_void<T>::value || //
+      std::is_reference<T>::value || //
+      std::is_function<T>::value || //
+      is_unbounded_array_v<T> || //
+      false);
+
+  // note: void return type with no function body to enforce that, in the
+  // typical case of complete non-function types, to minimize the quantity of
+  // evaluations and instantiations
+  template <typename T, std::size_t = sizeof(T)>
+  static void test(int);
+
+  // note: auto return type with no trailing return type to force the
+  // instantiation of the function and, therefore, to force the
+  // evaluation of she static-assert
+  template <typename T>
+  static auto test(...) {
+    static_assert(pass_v<T>, "must be complete, cv-void, or unbounded-array");
+    return;
+  }
+
+  template <typename T>
+  using apply = decltype(test<T>(0));
+};
+
+//  ok_
+//
+//  Enforce that each A... is a complete type, (possibly cv-qualified) void, or
+//  an array of unknown bound. Substitutes as T if that holds; otherwise fails a
+//  static-assert.
+//
+//  The reason to fail a static-assert and not, say, to fail to substitute is
+//  to force application to incomplete types to fail the compile rather than to
+//  allow the compile to succumb to ODR violation. The failing static-assert is
+//  a diagnosis of undefined behavior.
+//
+//  See:
+//    https://en.cppreference.com/w/cpp/types/is_invocable
+//    https://github.com/gcc-mirror/gcc/blob/releases/gcc-13.2.0/libstdc%2B%2B-v3/include/std/type_traits#L272-L287
+template <typename T, typename... A>
+using ok_ = type_t<T, ok_one_::apply<A>...>;
+
 template <typename F>
 struct traits {
   template <typename... A>
@@ -125,22 +175,27 @@ struct invoke_result<void_t<invoke_result_t<F, A...>>, F, A...> {
 };
 
 template <typename Void, typename F, typename... A>
-FOLLY_INLINE_VARIABLE constexpr bool is_invocable_v = false;
+FOLLY_INLINE_VARIABLE constexpr bool is_invocable_v = ok_<bool, F, A...>{false};
 
 template <typename F, typename... A>
 FOLLY_INLINE_VARIABLE constexpr bool
     is_invocable_v<void_t<invoke_result_t<F, A...>>, F, A...> = true;
 
 template <typename Void, typename R, typename F, typename... A>
-FOLLY_INLINE_VARIABLE constexpr bool is_invocable_r_v = false;
+FOLLY_INLINE_VARIABLE constexpr bool is_invocable_r_v =
+    ok_<bool, R, F, A...>{false};
 
+// clang-format off
 template <typename R, typename F, typename... A>
 FOLLY_INLINE_VARIABLE constexpr bool
     is_invocable_r_v<void_t<invoke_result_t<F, A...>>, R, F, A...> =
+        std::is_void<R>::value ||
         std::is_convertible<invoke_result_t<F, A...>, R>::value;
+// clang-format on
 
 template <typename Void, typename F, typename... A>
-FOLLY_INLINE_VARIABLE constexpr bool is_nothrow_invocable_v = false;
+FOLLY_INLINE_VARIABLE constexpr bool is_nothrow_invocable_v =
+    ok_<bool, F, A...>{false};
 
 template <typename F, typename... A>
 FOLLY_INLINE_VARIABLE constexpr bool
@@ -148,13 +203,17 @@ FOLLY_INLINE_VARIABLE constexpr bool
         traits<F>::template nothrow<A...>;
 
 template <typename Void, typename R, typename F, typename... A>
-FOLLY_INLINE_VARIABLE constexpr bool is_nothrow_invocable_r_v = false;
+FOLLY_INLINE_VARIABLE constexpr bool is_nothrow_invocable_r_v =
+    ok_<bool, R, F, A...>{false};
 
+// clang-format off
 template <typename R, typename F, typename... A>
 FOLLY_INLINE_VARIABLE constexpr bool
     is_nothrow_invocable_r_v<void_t<invoke_result_t<F, A...>>, R, F, A...> =
-        std::is_convertible<invoke_result_t<F, A...>, R>::value&&
-            traits<F>::template nothrow<A...>;
+        traits<F>::template nothrow<A...> && (
+            std::is_void<R>::value ||
+            is_nothrow_convertible_v<invoke_result_t<F, A...>, R>);
+// clang-format on
 
 } // namespace invoke_detail
 
@@ -290,6 +349,51 @@ struct invoke_traits : detail::invoke_traits_base<I> {
   struct is_nothrow_invocable_r //
       : bool_constant<
             invoke_detail::is_nothrow_invocable_r_v<void, R, I, A...>> {};
+};
+
+//  invoke_first_match
+//
+//  A composite invoker which delegates to the first invoker parameter matching
+//  the call.
+//
+//  Example:
+//
+//      FOLLY_CREATE_QUAL_INVOKER(invoke_x_fn, x);
+//      FOLLY_CREATE_QUAL_INVOKER(invoke_y_fn, y);
+//
+//      using invoke_x_or_y_fn = invoke_first_match<invoke_x_fn, invoke_y_fn>;
+//      inline constexpr invoke_x_or_y_fn invoke_x_or_y;
+//
+//      void go(int a, int b) { invoke_x_or_y(a, b); }
+//
+//  In this example, go(...) will delegate to x(...) if it exists and is a match
+//  for the arguments, or otherwise will delegate to y(...).
+template <typename... Invoker>
+struct invoke_first_match : private Invoker... {
+ private:
+  using iseq = std::index_sequence_for<Invoker...>;
+  template <size_t Idx>
+  using at = type_pack_element_t<Idx, Invoker...>;
+  template <size_t... Idx, typename... A>
+  static constexpr size_t first_(std::index_sequence<Idx...>, tag_t<A...>) {
+    constexpr bool r[] = {is_invocable_v<at<Idx> const&, A...>..., false};
+    for (size_t i = 0; i < sizeof...(Invoker); ++i) {
+      if (r[i]) {
+        return i;
+      }
+    }
+    return sizeof...(Invoker);
+  }
+  template <typename... A>
+  static constexpr size_t first = first_(iseq{}, tag<A...>);
+
+ public:
+  template <typename... A, typename Inv = at<first<A...>>>
+  FOLLY_ERASE constexpr auto operator()(A&&... a) const
+      noexcept(is_nothrow_invocable_v<Inv const&, A...>)
+          -> invoke_result_t<Inv const&, A...> {
+    return static_cast<Inv const&>(*this)(static_cast<A&&>(a)...);
+  }
 };
 
 } // namespace folly
@@ -718,7 +822,7 @@ using is_tag_invocable_r =
 
 template <typename R, typename Tag, typename... Args>
 FOLLY_INLINE_VARIABLE constexpr bool is_tag_invocable_r_v =
-    is_tag_invocable_r<R, decltype(folly::tag_invoke), Tag, Args...>::value;
+    is_tag_invocable_r<R, Tag, Args...>::value;
 
 template <typename R, typename Tag, typename... Args>
 using is_nothrow_tag_invocable_r =

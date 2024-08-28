@@ -12,6 +12,7 @@
 #include "hermes/Public/CtorConfig.h"
 #include "hermes/Public/GCConfig.h"
 
+#include <cstdint>
 #include <memory>
 
 namespace hermes {
@@ -21,6 +22,13 @@ enum CompilationMode {
   SmartCompilation,
   ForceEagerCompilation,
   ForceLazyCompilation
+};
+
+enum class SynthTraceMode : int8_t {
+  None,
+  Replaying,
+  Tracing,
+  TracingAndReplaying,
 };
 
 class PinnedHermesValue;
@@ -50,13 +58,16 @@ class PinnedHermesValue;
   F(constexpr, bool, OptimizedEval, false)                             \
                                                                        \
   /* Whether to emit async break check instructions in eval code */    \
-  F(constexpr, bool, AsyncBreakCheckInEval, false)                     \
+  F(constexpr, bool, AsyncBreakCheckInEval, true)                      \
                                                                        \
   /* Support for ES6 Promise. */                                       \
   F(constexpr, bool, ES6Promise, true)                                 \
                                                                        \
   /* Support for ES6 Proxy. */                                         \
   F(constexpr, bool, ES6Proxy, true)                                   \
+                                                                       \
+  /* Support for ES6 Class. */                                         \
+  F(constexpr, bool, ES6Class, false)                                  \
                                                                        \
   /* Support for ECMA-402 Intl APIs. */                                \
   F(constexpr, bool, Intl, true)                                       \
@@ -67,21 +78,8 @@ class PinnedHermesValue;
   /* Support for using microtasks. */                                  \
   F(constexpr, bool, MicrotaskQueue, false)                            \
                                                                        \
-  /* Enable synth trace. */                                            \
-  F(constexpr, bool, TraceEnabled, false)                              \
-                                                                       \
-  /* Scratch path for synth trace. */                                  \
-  F(HERMES_NON_CONSTEXPR, std::string, TraceScratchPath, "")           \
-                                                                       \
-  /* Result path for synth trace. */                                   \
-  F(HERMES_NON_CONSTEXPR, std::string, TraceResultPath, "")            \
-                                                                       \
-  /* Callout to register an interesting (e.g. lead to crash) */        \
-  /* and completed trace. */                                           \
-  F(HERMES_NON_CONSTEXPR,                                              \
-    std::function<bool()>,                                             \
-    TraceRegisterCallback,                                             \
-    nullptr)                                                           \
+  /* Runtime set up for synth trace. */                                \
+  F(constexpr, SynthTraceMode, SynthTraceMode, SynthTraceMode::None)   \
                                                                        \
   /* Enable sampling certain statistics. */                            \
   F(constexpr, bool, EnableSampledStats, false)                        \

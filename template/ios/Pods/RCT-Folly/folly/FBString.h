@@ -39,11 +39,16 @@
 #include <folly/Traits.h>
 #include <folly/hash/Hash.h>
 #include <folly/lang/Assume.h>
+#include <folly/lang/CheckedMath.h>
 #include <folly/lang/Exception.h>
 #include <folly/memory/Malloc.h>
 
 #if FOLLY_HAS_STRING_VIEW
 #include <string_view>
+#endif
+
+#if FOLLY_CPLUSPLUS >= 202002L
+#include <compare>
 #endif
 
 FOLLY_PUSH_WARNING
@@ -402,7 +407,8 @@ class fbstring_core {
       auto maybeSmallSize = size_t(maxSmallSize) -
           size_t(static_cast<UChar>(small_[maxSmallSize]));
       // With this syntax, GCC and Clang generate a CMOV instead of a branch.
-      ret = (static_cast<ssize_t>(maybeSmallSize) >= 0) ? maybeSmallSize : ret;
+      ret =
+          (static_cast<ptrdiff_t>(maybeSmallSize) >= 0) ? maybeSmallSize : ret;
     } else {
       ret = (category() == Category::isSmall) ? smallSize() : ret;
     }
@@ -482,13 +488,20 @@ class fbstring_core {
       size_t oldcnt = dis->refCount_.fetch_sub(1, std::memory_order_acq_rel);
       assert(oldcnt > 0);
       if (oldcnt == 1) {
-        free(dis);
+        ::free(dis);
       }
     }
 
     static RefCounted* create(size_t* size) {
-      const size_t allocSize =
-          goodMallocSize(getDataOffset() + (*size + 1) * sizeof(Char));
+      size_t capacityBytes;
+      if (!folly::checked_add(&capacityBytes, *size, size_t(1))) {
+        throw_exception(std::length_error(""));
+      }
+      if (!folly::checked_muladd(
+              &capacityBytes, capacityBytes, sizeof(Char), getDataOffset())) {
+        throw_exception(std::length_error(""));
+      }
+      const size_t allocSize = goodMallocSize(capacityBytes);
       auto result = static_cast<RefCounted*>(checkedMalloc(allocSize));
       result->refCount_.store(1, std::memory_order_release);
       *size = (allocSize - getDataOffset()) / sizeof(Char) - 1;
@@ -510,8 +523,15 @@ class fbstring_core {
         const size_t currentCapacity,
         size_t* newCapacity) {
       assert(*newCapacity > 0 && *newCapacity > currentSize);
-      const size_t allocNewCapacity =
-          goodMallocSize(getDataOffset() + (*newCapacity + 1) * sizeof(Char));
+      size_t capacityBytes;
+      if (!folly::checked_add(&capacityBytes, *newCapacity, size_t(1))) {
+        throw_exception(std::length_error(""));
+      }
+      if (!folly::checked_muladd(
+              &capacityBytes, capacityBytes, sizeof(Char), getDataOffset())) {
+        throw_exception(std::length_error(""));
+      }
+      const size_t allocNewCapacity = goodMallocSize(capacityBytes);
       auto const dis = fromData(data);
       assert(dis->refCount_.load(std::memory_order_acquire) == 1);
       auto result = static_cast<RefCounted*>(smartRealloc(
@@ -1682,7 +1702,35 @@ class basic_fbstring {
     return r != 0 ? r : n1 > n2 ? 1 : n1 < n2 ? -1 : 0;
   }
 
+#if FOLLY_CPLUSPLUS >= 202002L
+  friend auto operator<=>(
+      const basic_fbstring& lhs, const basic_fbstring& rhs) {
+    return lhs.spaceship(rhs.data(), rhs.size());
+  }
+  friend auto operator<=>(const basic_fbstring& lhs, const char* rhs) {
+    return lhs.spaceship(rhs, traitsLength(rhs));
+  }
+  template <typename A2>
+  friend auto operator<=>(
+      const basic_fbstring& lhs, const std::basic_string<E, T, A2>& rhs) {
+    return lhs.spaceship(rhs.data(), rhs.size());
+  }
+#endif // FOLLY_CPLUSPLUS >= 202002L
+
  private:
+#if FOLLY_CPLUSPLUS >= 202002L
+  auto spaceship(const value_type* rhsData, size_type rhsSize) const {
+    auto c = compare(0, size(), rhsData, rhsSize);
+    if (c == 0) {
+      return std::strong_ordering::equal;
+    } else if (c < 0) {
+      return std::strong_ordering::less;
+    } else {
+      return std::strong_ordering::greater;
+    }
+  }
+#endif // FOLLY_CPLUSPLUS >= 202002L
+
   // Data
   Storage store_;
 };
@@ -2579,9 +2627,11 @@ operator<<(
   return os;
 }
 
+#if FOLLY_CPLUSPLUS < 201703L
 template <typename E1, class T, class A, class S>
 constexpr typename basic_fbstring<E1, T, A, S>::size_type
     basic_fbstring<E1, T, A, S>::npos;
+#endif
 
 // basic_string compatibility routines
 

@@ -101,7 +101,7 @@ class Latch {
   FOLLY_ALWAYS_INLINE void count_down(ptrdiff_t n = 1) noexcept {
     terminate_if(n < 0 || n > max());
     if (FOLLY_LIKELY(n)) {
-      const auto count = count_.fetch_sub(n, std::memory_order_relaxed);
+      const auto count = count_.fetch_sub(n, std::memory_order_acq_rel);
       terminate_if(count < n);
       if (FOLLY_UNLIKELY(count == n)) {
         semaphore_.post();
@@ -154,7 +154,7 @@ class Latch {
   }
 
   std::atomic<int32_t> count_;
-  SaturatingSemaphore</* MayBlock = */ true> semaphore_;
+  SaturatingSemaphore<> semaphore_;
 };
 
 } // namespace folly
