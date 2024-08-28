@@ -96,7 +96,7 @@ TypeError::TypeError(
 
 bool operator<(dynamic const& a, dynamic const& b) {
   constexpr auto obj = dynamic::OBJECT;
-  if (UNLIKELY(a.type_ == obj || b.type_ == obj)) {
+  if (FOLLY_UNLIKELY(a.type_ == obj || b.type_ == obj)) {
     auto type = a.type_ == obj ? b.type_ : b.type_ == obj ? a.type_ : obj;
     throw_exception<TypeError>("object", type);
   }
@@ -131,6 +131,18 @@ bool operator==(dynamic const& a, dynamic const& b) {
 #undef FB_X
 }
 
+dynamic::dynamic(dynamic const& o) : type_(o.type_) {
+#define FB_X(T) new (getAddress<T>()) T(*o.getAddress<T>())
+  FB_DYNAMIC_APPLY(o.type_, FB_X);
+#undef FB_X
+}
+
+dynamic::dynamic(dynamic&& o) noexcept : type_(o.type_) {
+#define FB_X(T) new (getAddress<T>()) T(std::move(*o.getAddress<T>()))
+  FB_DYNAMIC_APPLY(o.type_, FB_X);
+#undef FB_X
+}
+
 dynamic& dynamic::operator=(dynamic const& o) {
   if (&o != this) {
     if (type_ == o.type_) {
@@ -161,6 +173,17 @@ dynamic& dynamic::operator=(dynamic&& o) noexcept {
 #undef FB_X
       type_ = o.type_;
     }
+  }
+  return *this;
+}
+
+dynamic& dynamic::operator=(std::nullptr_t) {
+  if (type_ == NULLT) {
+    // Do nothing -- nul has only one possible value.
+  } else {
+    destroy();
+    u_.nul = nullptr;
+    type_ = NULLT;
   }
   return *this;
 }
@@ -328,7 +351,7 @@ std::size_t dynamic::hash() const {
     case ARRAY:
       return static_cast<std::size_t>(folly::hash::hash_range(begin(), end()));
     case INT64:
-      return std::hash<int64_t>()(getInt());
+      return Hash()(getInt());
     case DOUBLE: {
       double valueAsDouble = getDouble();
       int64_t valueAsDoubleAsInt =
@@ -337,12 +360,12 @@ std::size_t dynamic::hash() const {
       // values hash the same to keep behavior consistent, but leave others use
       // double hashing to avoid restricting the hash range unnecessarily.
       if (double(valueAsDoubleAsInt) == valueAsDouble) {
-        return std::hash<int64_t>()(valueAsDoubleAsInt);
+        return Hash()(valueAsDoubleAsInt);
       }
-      return std::hash<double>()(valueAsDouble);
+      return Hash()(valueAsDouble);
     }
     case BOOL:
-      return std::hash<bool>()(getBool());
+      return Hash()(getBool());
     case STRING:
       // keep consistent with detail::DynamicHasher
       return Hash()(getString());
@@ -356,6 +379,7 @@ char const* dynamic::typeName(Type t) {
 #undef FB_X
 }
 
+// NOTE: like ~dynamic, destroy() leaves type_ and u_ in an invalid state.
 void dynamic::destroy() noexcept {
   // This short-circuit speeds up some microbenchmarks.
   if (type_ == NULLT) {
@@ -365,8 +389,6 @@ void dynamic::destroy() noexcept {
 #define FB_X(T) detail::Destroy::destroy(getAddress<T>())
   FB_DYNAMIC_APPLY(type_, FB_X);
 #undef FB_X
-  type_ = NULLT;
-  u_.nul = nullptr;
 }
 
 dynamic dynamic::merge_diff(const dynamic& source, const dynamic& target) {

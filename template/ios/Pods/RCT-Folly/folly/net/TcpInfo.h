@@ -168,6 +168,8 @@ struct TcpInfo {
   Optional<uint64_t> packetsWithDataReceived() const;
   Optional<uint64_t> packetsRetransmitted() const;
   Optional<uint64_t> packetsInFlight() const;
+  Optional<uint64_t> packetsDelivered() const;
+  Optional<uint64_t> packetsDeliveredWithCEMarks() const;
 
   Optional<uint64_t> cwndInPackets() const;
   Optional<uint64_t> cwndInBytes() const;
@@ -204,6 +206,9 @@ struct TcpInfo {
   Optional<size_t> sendBufInUseBytes() const;
   Optional<size_t> recvBufInUseBytes() const;
 
+  void setSendBufInUseBytes(int numBytes) { maybeSendBufInUseBytes = numBytes; }
+  void setRecvBufInUseBytes(int numBytes) { maybeRecvBufInUseBytes = numBytes; }
+
  private:
   /**
    * Returns pointer containing requested field from passed struct.
@@ -214,7 +219,7 @@ struct TcpInfo {
   static const T1* getFieldAsPtr(
       const T2& tgtStruct, const int tgtBytesRead, T1 T2::*field) {
     if (field != nullptr && tgtBytesRead > 0 &&
-        getFieldOffset(field) + sizeof(tgtStruct.*field) <=
+        getTcpInfoFieldOffset(field) + sizeof(tgtStruct.*field) <=
             (unsigned long)tgtBytesRead) {
       return &(tgtStruct.*field);
     }
@@ -231,8 +236,10 @@ struct TcpInfo {
    *    https://gist.github.com/graphitemaster/494f21190bb2c63c5516
    */
   template <typename T1, typename T2>
-  static size_t constexpr getFieldOffset(T1 T2::*field) {
-    static_assert(std::is_standard_layout<T1>() && std::is_trivial<T1>());
+  static size_t constexpr getTcpInfoFieldOffset(T1 T2::*field) {
+    static_assert(
+        std::is_standard_layout<T1>() && std::is_trivial<T1>(),
+        "Object type is not standard layout or trivial");
     constexpr T2 dummy{};
     return size_t(&(dummy.*field)) - size_t(&dummy);
   }
@@ -390,7 +397,7 @@ struct TcpInfo {
   folly::Optional<uint64_t> getFieldAsOptUInt64(
       const T2& tgtStruct, T1 T2::*field) const {
     if (field != nullptr && tcpCcInfoBytesRead > 0 &&
-        getFieldOffset(field) + sizeof(tgtStruct.*field) <=
+        getTcpInfoFieldOffset(field) + sizeof(tgtStruct.*field) <=
             (unsigned long)tcpCcInfoBytesRead) {
       return folly::Optional<uint64_t>(tgtStruct.*field);
     }

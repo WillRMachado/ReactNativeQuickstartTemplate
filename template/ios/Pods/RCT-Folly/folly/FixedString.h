@@ -58,8 +58,10 @@ struct FixedStringBase_ {
   static constexpr std::size_t npos = static_cast<std::size_t>(-1);
 };
 
+#if FOLLY_CPLUSPLUS < 201703L
 template <class Void>
 constexpr std::size_t FixedStringBase_<Void>::npos;
+#endif
 
 using FixedStringBase = FixedStringBase_<>;
 
@@ -393,10 +395,6 @@ struct ReverseIterator {
 
 } // namespace fixedstring
 } // namespace detail
-
-// Defined in folly/hash/Hash.h
-std::uint32_t hsieh_hash32_buf_constexpr(
-    const unsigned char* buf, std::size_t len);
 
 /** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** *
  * \class BasicFixedString
@@ -1043,10 +1041,6 @@ class BasicFixedString : private detail::fixedstring::FixedStringBase {
    * \return `N`.
    */
   static constexpr std::size_t max_size() noexcept { return N; }
-
-  constexpr std::uint32_t hash() const noexcept {
-    return folly::hsieh_hash32_buf_constexpr(data_, size_);
-  }
 
   /**
    * \note `at(size())` is allowed will return `Char(0)`.

@@ -23,6 +23,7 @@
 #include <mutex>
 
 #include <folly/Function.h>
+#include <folly/portability/SysTypes.h>
 
 namespace folly {
 
@@ -95,7 +96,8 @@ class AtForkList {
 //
 //  Wraps pthread_atfork on platforms with pthread_atfork, but with additional
 //  facilities.
-struct AtFork {
+class AtFork {
+ public:
   static void init();
   static void registerHandler(
       void const* handle,
@@ -106,6 +108,9 @@ struct AtFork {
 
   using fork_t = pid_t();
   static pid_t forkInstrumented(fork_t forkFn);
+
+ private:
+  static bool init_;
 };
 
 } // namespace folly

@@ -15,6 +15,17 @@
  */
 
 // @author Nicholas Ormrod <njormrod@fb.com>
+/**
+ * DynamicConverter provides a simple, generic interface by which dynamic
+ * objects can be converted to/from concrete C++ types.
+ *
+ * Can be used in conjunction with folly/json.h to read a JSON value (which
+ * returns a folly::dynamic) and then turn that JSON value into a well-typed
+ * representation.
+ *
+ * @file DynamicConverter.h
+ * @refcode folly/docs/examples/folly/DynamicConverter.cpp
+ */
 
 #pragma once
 
@@ -31,24 +42,26 @@
 #include <folly/lang/Exception.h>
 
 namespace folly {
+
+/**
+ * Return a well-typed representation of a dynamic.
+ *
+ * See docs/DynamicConverter.md for supported types and customization.
+ *
+ * @tparam T  A type representing the structure of the dynamic argument.
+ * @refcode folly/docs/examples/folly/DynamicConverter.cpp
+ */
 template <typename T>
 T convertTo(const dynamic&);
+
+/**
+ * Turn an arbitrary type into a dynamic.
+ *
+ * @see convertTo for customization
+ */
 template <typename T>
 dynamic toDynamic(const T&);
 } // namespace folly
-
-/**
- * convertTo returns a well-typed representation of the input dynamic.
- *
- * Example:
- *
- *   dynamic d = dynamic::array(
- *       dynamic::array(1, 2, 3),
- *       dynamic::array(4, 5)); // a vector of vector of int
- *   auto vvi = convertTo<fbvector<fbvector<int>>>(d);
- *
- * See docs/DynamicConverter.md for supported types and customization
- */
 
 namespace folly {
 
@@ -74,7 +87,7 @@ using detect_like_optional =
 
 template <typename T>
 struct iterator_class_is_container {
-  typedef std::reverse_iterator<typename T::iterator> some_iterator;
+  typedef typename T::iterator some_iterator;
   enum {
     value = is_detected_v<detect_member_type_value_type, T> &&
         std::is_constructible<T, some_iterator, some_iterator>::value

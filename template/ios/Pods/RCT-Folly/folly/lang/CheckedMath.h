@@ -45,7 +45,7 @@ bool generic_checked_add(T* result, T a, T b) {
 
 template <typename T, typename = std::enable_if_t<std::is_unsigned<T>::value>>
 bool generic_checked_small_mul(T* result, T a, T b) {
-  static_assert(sizeof(T) < sizeof(uint64_t), "too large");
+  static_assert(sizeof(T) < sizeof(uint64_t), "Too large");
   uint64_t res = static_cast<uint64_t>(a) * static_cast<uint64_t>(b);
   constexpr uint64_t overflowMask = ~((1ULL << (sizeof(T) * 8)) - 1);
   if (FOLLY_UNLIKELY((res & overflowMask) != 0)) {
@@ -157,6 +157,26 @@ bool checked_add(T* result, T a, T b, T c, T d) {
   return true;
 }
 
+template <typename T>
+bool checked_div(T* result, T dividend, T divisor) {
+  if (FOLLY_UNLIKELY(divisor == 0)) {
+    *result = {};
+    return false;
+  }
+  *result = dividend / divisor;
+  return true;
+}
+
+template <typename T>
+bool checked_mod(T* result, T dividend, T divisor) {
+  if (FOLLY_UNLIKELY(divisor == 0)) {
+    *result = {};
+    return false;
+  }
+  *result = dividend % divisor;
+  return true;
+}
+
 template <typename T, typename = std::enable_if_t<std::is_unsigned<T>::value>>
 bool checked_mul(T* result, T a, T b) {
   assert(result != nullptr);
@@ -166,7 +186,7 @@ bool checked_mul(T* result, T a, T b) {
   }
   *result = {};
   return false;
-#elif _MSC_VER
+#elif _MSC_VER && FOLLY_X64
   static_assert(sizeof(T) <= sizeof(unsigned __int64), "Too large");
   if (sizeof(T) < sizeof(uint64_t)) {
     return detail::generic_checked_mul(result, a, b);

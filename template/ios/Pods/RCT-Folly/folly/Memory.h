@@ -119,7 +119,7 @@ void rawOverAlignedImpl(Alloc const& alloc, size_t n, void*& raw) {
 
   if (kCanBypass && kAlign > kBaseAlign) {
     // allocating as BaseType isn't sufficient to get alignment, but
-    // since we can bypass Alloc we can use something like posix_memalign
+    // since we can bypass Alloc we can use something like posix_memalign.
     if (kAllocate) {
       raw = aligned_malloc(n * sizeof(T), kAlign);
     } else {
@@ -678,6 +678,15 @@ class CxxAllocatorAdaptor : private std::allocator<T> {
   constexpr CxxAllocatorAdaptor(
       CxxAllocatorAdaptor<U, Inner, FallbackToStdAlloc> const& other)
       : inner_(other.inner_) {}
+
+  CxxAllocatorAdaptor& operator=(CxxAllocatorAdaptor const& other) = default;
+
+  template <typename U, std::enable_if_t<!std::is_same<U, T>::value, int> = 0>
+  CxxAllocatorAdaptor& operator=(
+      CxxAllocatorAdaptor<U, Inner, FallbackToStdAlloc> const& other) noexcept {
+    inner_ = other.inner_;
+    return *this;
+  }
 
   T* allocate(std::size_t n) {
     if (FallbackToStdAlloc && inner_ == nullptr) {
