@@ -1,3 +1,4 @@
+import { StyledProvider } from "@/components/ui/styledprovider";
 import 'react-native';
 import React from 'react';
 import renderer from 'react-test-renderer';
@@ -7,7 +8,6 @@ import renderer from 'react-test-renderer';
 // import { GlobalWrapper } from 'src/utils/wrappers';
 
 import { config } from '@gluestack-ui/config';
-import { StyledProvider } from '@gluestack-ui/themed';
 import { expect, it } from '@jest/globals';
 // import GlobalWrapperMocked from '../../utils/wrappers/GlobalWrapperMocked';
 import Gg from '../MainScreen';

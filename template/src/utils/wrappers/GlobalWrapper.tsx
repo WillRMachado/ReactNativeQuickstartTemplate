@@ -1,19 +1,20 @@
-import React from 'react';
+import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 
+import React from 'react';
 import { Provider } from 'react-redux';
 import { config } from '@gluestack-ui/config';
-import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { store } from '../../store';
+import "@/global.css"
 
 function App({ children }: { children: React.ReactNode }): React.JSX.Element {
 	return (
-		<Provider store={store}>
-			{/* {console.log(JSON.stringify({ config }))} */}
-			<GluestackUIProvider config={config}>
+        <Provider store={store}>
+            {/* {console.log(JSON.stringify({ config }))} */}
+            <GluestackUIProvider>
 				{children}
 			</GluestackUIProvider>
-		</Provider>
-	);
+        </Provider>
+    );
 }
 
 export default App;

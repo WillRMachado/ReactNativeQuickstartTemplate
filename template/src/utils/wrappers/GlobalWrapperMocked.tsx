@@ -1,9 +1,7 @@
-import React from 'react';
+import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 
+import React from 'react';
 import { Provider } from 'react-redux';
-// import { config } from '@gluestack-ui/config';
-// import { AnimationResolver } from '@gluestack-style/animation-resolver';
-import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { store } from '../../store';
 
 // export declare const gluestackUIConfig: {
@@ -1409,12 +1407,12 @@ const A = {
 function App({ children }: { children: React.ReactNode }): React.JSX.Element {
 	// console.log({ config });
 	return (
-		<Provider store={store}>
-			<GluestackUIProvider config={A.config}>
+        <Provider store={store}>
+            <GluestackUIProvider>
 				{children}
 			</GluestackUIProvider>
-		</Provider>
-	);
+        </Provider>
+    );
 }
 
 export default App;
