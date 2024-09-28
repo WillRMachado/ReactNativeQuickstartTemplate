@@ -1,0 +1,52 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Splash Screen 1`] = `
+<View
+  data-style=""
+  dataSet={
+    {
+      "style": "",
+    }
+  }
+  style={
+    [
+      undefined,
+      {},
+      {},
+      {},
+      undefined,
+    ]
+  }
+>
+  <Text
+    data-style=""
+    dataSet={
+      {
+        "style": "",
+      }
+    }
+    size="md"
+    style={
+      [
+        undefined,
+        {},
+        {
+          "color": "#525252",
+          "fontFamily": undefined,
+          "fontStyle": "normal",
+          "fontWeight": "400",
+          "letterSpacing": 0,
+        },
+        {},
+        {
+          "fontSize": 16,
+          "lineHeight": 22,
+        },
+        undefined,
+      ]
+    }
+  >
+    Hello World!
+  </Text>
+</View>
+`;
