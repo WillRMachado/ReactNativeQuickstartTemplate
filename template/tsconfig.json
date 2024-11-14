@@ -4,7 +4,7 @@
 		"jsx": "react",
 		/* Basic Options */
 		"allowJs": false,
-		/* Strict Type-Checking Options */
+		/* Strict TypeChecking Options */
 		"strict": true,
 		"noImplicitAny": true,
 		"strictNullChecks": true,
@@ -21,11 +21,15 @@
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
 		"baseUrl": "",
+
 		"paths": {
+			"@/*": ["./*"],
+			"tailwind.config": ["./tailwind.config.js"],
 			"src/*": ["./src/*"],
 			"~/wrappers": ["./src/utils/wrappers"]
 		}
 	},
+
 	"include": [
 		"./src/**/*",
 		"./**/*",
@@ -40,6 +44,68 @@
 	"exclude": [
 		"node_modules",
 		"e2e",
-		"__tests__/" // exclude test files
+		"./src/gluestack/*",
+    "**/*.test.*"
 	]
 }
+
+// {
+//   -	"extends": "@react-native/typescript-config/tsconfig.json",
+//   -	"compilerOptions": {
+//   -		"jsx": "react",
+//   -		/* Basic Options */
+//   -		"allowJs": false,
+//   -		/* Strict Type-Checking Options */
+//   -		"strict": true,
+//   -		"noImplicitAny": true,
+//   -		"strictNullChecks": true,
+//   -		"strictFunctionTypes": true,
+//   -		"strictPropertyInitialization": true,
+//   -		"noImplicitThis": true,
+//   -		"alwaysStrict": true,
+//   -		/* Additional Checks */
+//   -		"noUnusedLocals": true,
+//   -		"noUnusedParameters": true,
+//   -		"noImplicitReturns": true,
+//   -		"experimentalDecorators": true,
+//   -		/* Module Resolution Options */
+//   -		"module": "NodeNext",
+//   -		"moduleResolution": "NodeNext",
+//   -		"baseUrl": "",
+//   -		"paths": {
+//   -			"src/*": ["./src/*"],
+//   -			"~/wrappers": ["./src/utils/wrappers"]
+//   -		}
+//   -	},
+//   -	"include": [
+//   -		"./src/**/*",
+//   -		"./**/*",
+//   -		"./src/@types/**/*",
+//   -		"index.d.ts",
+//   -		".eslintrc.js",
+//   -		"jest.setup.js",
+//   -		"jest.config.js",
+//   -		"babel.config.js",
+//   -		"index.js"
+//   -	],
+//   -	"exclude": [
+//   -		"node_modules",
+//   -		"e2e",
+//   -		"__tests__/" // exclude test files
+//   -	]
+//   -}
+//   +  "compilerOptions": {
+//   +    "paths": {
+//   +      "@/*": [
+//   +        "./*"
+//   +      ],
+//   +      "tailwind.config": [
+//   +        "./tailwind.config.js"
+//   +      ]
+//   +    }
+//   +  },
+//   +  "exclude": [
+//   +    "node_modules"
+//   +  ]
+//   +}
+//   \ No newline at end of file
