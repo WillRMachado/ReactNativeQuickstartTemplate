@@ -85,6 +85,7 @@ module.exports = {
 			version: 'detect',
 		},
 	},
+	ignorePatterns: ['**/gluestack/ui/*'],
 };
 
 // "extends": ["airbnb", "prettier"],
