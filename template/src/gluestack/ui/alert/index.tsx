@@ -136,21 +136,43 @@ const PrimitiveIcon = React.forwardRef<
 	) => {
 		color = color ?? classNameColor;
 		const sizeProps = useMemo(() => {
-			if (size) return { size };
-			if (height && width) return { height, width };
-			if (height) return { height };
-			if (width) return { width };
+			if (size)
+				return {
+					size,
+				};
+			if (height && width)
+				return {
+					height,
+					width,
+				};
+			if (height)
+				return {
+					height,
+				};
+			if (width)
+				return {
+					width,
+				};
 			return {};
 		}, [size, height, width]);
 
 		let colorProps = {};
 		if (fill) {
-			colorProps = { ...colorProps, fill: fill };
+			colorProps = {
+				...colorProps,
+				fill: fill,
+			};
 		}
 		if (stroke !== 'currentColor') {
-			colorProps = { ...colorProps, stroke: stroke };
+			colorProps = {
+				...colorProps,
+				stroke: stroke,
+			};
 		} else if (stroke === 'currentColor' && color !== undefined) {
-			colorProps = { ...colorProps, stroke: color };
+			colorProps = {
+				...colorProps,
+				stroke: color,
+			};
 		}
 
 		if (AsComp) {
@@ -183,9 +205,13 @@ export const UIAlert = createAlert({
 	Icon: IconWrapper,
 });
 
-cssInterop(UIAlert, { className: 'style' });
+cssInterop(UIAlert, {
+	className: 'style',
+});
 //@ts-ignore
-cssInterop(UIAlert.Text, { className: 'style' });
+cssInterop(UIAlert.Text, {
+	className: 'style',
+});
 //@ts-ignore
 cssInterop(IconWrapper, {
 	className: {
@@ -211,8 +237,15 @@ const Alert = React.forwardRef<React.ElementRef<typeof UIAlert>, IAlertProps>(
 	({ className, variant = 'solid', action = 'muted', ...props }, ref) => {
 		return (
 			<UIAlert
-				className={alertStyle({ action, variant, class: className })}
-				context={{ variant, action }}
+				className={alertStyle({
+					action,
+					variant,
+					class: className,
+				})}
+				context={{
+					variant,
+					action,
+				}}
 				ref={ref}
 				{...props}
 			/>
@@ -280,7 +313,9 @@ const AlertIcon = React.forwardRef<
 			<UIAlert.Icon
 				ref={ref}
 				{...props}
-				className={alertIconStyle({ class: className })}
+				className={alertIconStyle({
+					class: className,
+				})}
 				size={size}
 			/>
 		);
@@ -292,7 +327,9 @@ const AlertIcon = React.forwardRef<
 			<UIAlert.Icon
 				ref={ref}
 				{...props}
-				className={alertIconStyle({ class: className })}
+				className={alertIconStyle({
+					class: className,
+				})}
 			/>
 		);
 	}

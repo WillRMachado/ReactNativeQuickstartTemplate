@@ -18,10 +18,10 @@ describe('MainScreen component should render correctly', () => {
 		const component = (
 			// <ThemeProvider storage={storage}>
 			<GlobalWrapper>
-			{/* // <Provider store={store}> */}
+				{/* // <Provider store={store}> */}
 				<MainScreen />
-			{/* // </Provider> */}
-			 </GlobalWrapper>
+				{/* // </Provider> */}
+			</GlobalWrapper>
 			// </ThemeProvider>
 		);
 

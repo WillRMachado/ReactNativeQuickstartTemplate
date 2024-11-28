@@ -41,12 +41,7 @@
 		"babel.config.js",
 		"index.js"
 	],
-	"exclude": [
-		"node_modules",
-		"e2e",
-		"./src/gluestack/*",
-    "**/*.test.*"
-	]
+	"exclude": ["node_modules", "e2e", "./src/gluestack/*", "**/*.test.*"]
 }
 
 // {
