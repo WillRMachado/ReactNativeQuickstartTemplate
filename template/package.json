@@ -11,7 +11,6 @@
 		"postinstall": "patch-package"
 	},
 	"dependencies": {
-		"@gluestack-ui/alert": "^0.1.16",
 		"@gluestack-ui/nativewind-utils": "^1.0.23",
 		"@gluestack-ui/overlay": "^0.1.16",
 		"@gluestack-ui/toast": "^1.0.8",
