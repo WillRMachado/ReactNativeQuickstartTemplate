@@ -1,17 +1,17 @@
 {
   "name": "ReactCommon",
   "module_name": "ReactCommon",
-  "version": "0.75.2",
+  "version": "0.76.5",
   "summary": "-",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
   "authors": "Meta Platforms, Inc. and its affiliates",
   "platforms": {
-    "ios": "13.4"
+    "ios": "15.1"
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.75.2"
+    "tag": "v0.76.5"
   },
   "header_dir": "ReactCommon",
   "compiler_flags": "-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -Wno-comma -Wno-shorten-64-to-32 -Wno-documentation",
@@ -27,22 +27,22 @@
       "name": "turbomodule",
       "dependencies": {
         "React-callinvoker": [
-          "0.75.2"
+          "0.76.5"
         ],
         "React-perflogger": [
-          "0.75.2"
+          "0.76.5"
         ],
         "React-cxxreact": [
-          "0.75.2"
+          "0.76.5"
         ],
         "React-jsi": [
-          "0.75.2"
+          "0.76.5"
         ],
         "RCT-Folly": [
           "2024.01.01.00"
         ],
         "React-logger": [
-          "0.75.2"
+          "0.76.5"
         ],
         "DoubleConversion": [
 
@@ -62,7 +62,7 @@
           "name": "bridging",
           "dependencies": {
             "React-jsi": [
-              "0.75.2"
+              "0.76.5"
             ],
             "hermes-engine": [
 
@@ -83,13 +83,13 @@
           },
           "dependencies": {
             "React-debug": [
-              "0.75.2"
+              "0.76.5"
             ],
             "React-featureflags": [
-              "0.75.2"
+              "0.76.5"
             ],
             "React-utils": [
-              "0.75.2"
+              "0.76.5"
             ]
           }
         }

@@ -174,6 +174,8 @@
 #import "React/RCTDevLoadingViewProtocol.h"
 #import "React/RCTDevLoadingViewSetEnabled.h"
 #import "React/RCTInspectorDevServerHelper.h"
+#import "React/RCTInspectorNetworkHelper.h"
+#import "React/RCTInspectorUtils.h"
 #import "React/RCTPackagerClient.h"
 #import "React/RCTPackagerConnection.h"
 #import "React/RCTPausedInDebuggerOverlayController.h"

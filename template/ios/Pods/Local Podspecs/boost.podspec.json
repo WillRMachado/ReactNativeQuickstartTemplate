@@ -13,7 +13,7 @@
     "tag": "v1.84.0"
   },
   "platforms": {
-    "ios": "13.4"
+    "ios": "15.1"
   },
   "requires_arc": false,
   "source_files": "boost/**/*.{hpp,cpp}",

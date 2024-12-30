@@ -61,6 +61,7 @@
 #import "React/RCTTouchableComponentViewProtocol.h"
 #import "React/RCTFabricSurface.h"
 #import "React/PlatformRunLoopObserver.h"
+#import "React/RCTBoxShadow.h"
 #import "React/RCTColorSpaceUtils.h"
 #import "React/RCTGenericDelegateSplitter.h"
 #import "React/RCTIdentifierPool.h"

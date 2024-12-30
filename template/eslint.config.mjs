@@ -2,7 +2,6 @@ import _import from 'eslint-plugin-import';
 import prettier from 'eslint-plugin-prettier';
 import promise from 'eslint-plugin-promise';
 import pluginReact from 'eslint-plugin-react';
-import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import { fixupPluginRules } from '@eslint/compat';
 import pluginJs from '@eslint/js';
@@ -21,11 +20,7 @@ export default [
 	{
 		files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
 	},
-	{
-		languageOptions: {
-			globals: globals.browser,
-		},
-	},
+
 	pluginJs.configs.recommended,
 	...tseslint.configs.recommended,
 	pluginReact.configs.flat.recommended,
@@ -42,6 +37,8 @@ export default [
 			prettier,
 		},
 		rules: {
+			'react/jsx-uses-react': 'off',
+			'react/react-in-jsx-scope': 'off',
 			'@typescript-eslint/no-unused-vars': 'error',
 			'global-require': 0,
 			'react-hooks/exhaustive-deps': 'off',
