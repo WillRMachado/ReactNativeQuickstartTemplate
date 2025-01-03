@@ -1,8 +1,8 @@
 {
 	"printWidth": 80,
 	"endOfLine": "lf",
-	"tabWidth": 4,
-	"useTabs": true,
+	"tabWidth": 3,
+	"useTabs": false,
 	"arrowParens": "avoid",
 	"bracketSameLine": false,
 	"bracketSpacing": true,
